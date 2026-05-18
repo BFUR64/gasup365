@@ -32,12 +32,12 @@ export const ProfileScreen: React.FC = () => {
             <Text style={styles.statLabel}>Updates</Text>
             </View>
             <View style={styles.statCard}>
-            <Feather name="award" size={16} color="#EAB308" />
+            <Feather name="award" size={16} color={colors.primary} />
             <Text style={styles.statNumber}>156</Text>
             <Text style={styles.statLabel}>Points</Text>
             </View>
             <View style={styles.statCard}>
-            <Feather name="star" size={16} color="#EAB308" />
+            <Feather name="star" size={16} color={colors.primary} />
             <Text style={styles.statNumber}>4.8</Text>
             <Text style={styles.statLabel}>Rating</Text>
             </View>
@@ -82,22 +82,22 @@ const styles = StyleSheet.create({
     name: { fontSize: 20, fontWeight: 'bold', color: 'white', marginTop: 12 },
     role: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
     statsRow: { flexDirection: 'row', paddingHorizontal: 16, marginTop: -20, gap: 12 },
-    statCard: { flex: 1, backgroundColor: colors.card, borderRadius: 12, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border, shadowOpacity: 0.05, shadowRadius: 2 },
+    statCard: { flex: 1, backgroundColor: colors.card, borderRadius: 8, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border, boxShadow: '0 1px 8px rgba(31, 41, 51, 0.06)' },
     statNumber: { fontSize: 18, fontWeight: 'bold', marginTop: 4 },
     statLabel: { fontSize: 10, color: colors.muted },
-    menuContainer: { marginHorizontal: 16, marginTop: 20, backgroundColor: colors.card, borderRadius: 12, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+    menuContainer: { marginHorizontal: 16, marginTop: 20, backgroundColor: colors.card, borderRadius: 8, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
     menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
     menuLeft: { marginRight: 12 },
     menuLabel: { flex: 1, fontSize: 14, color: colors.text },
     badge: { backgroundColor: colors.primary, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2, marginRight: 8 },
     badgeText: { color: 'white', fontSize: 10, fontWeight: 'bold' },
-    impactCard: { margin: 16, backgroundColor: '#3B82F6', borderRadius: 12, padding: 16 },
+    impactCard: { margin: 16, backgroundColor: colors.primaryDark, borderRadius: 8, padding: 16 },
     impactTitle: { fontWeight: 'bold', color: 'white', marginBottom: 8 },
     impactText: { fontSize: 14, color: 'rgba(255,255,255,0.9)', marginBottom: 12 },
     impactBold: { fontWeight: 'bold' },
     impactFooter: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     impactFooterText: { fontSize: 12, color: 'white' },
-    footer: { alignItems: 'center', paddingVertical: 24, gap: 4 },
+    footer: { alignItems: 'center', paddingTop: 24, paddingBottom: 112, gap: 4 },
     footerText: { fontSize: 12, color: colors.muted },
     footerSub: { fontSize: 10, color: colors.muted, textAlign: 'center' },
 });

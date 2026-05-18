@@ -70,11 +70,7 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 5,
+        boxShadow: '0 8px 18px rgba(194, 65, 12, 0.28)',
     },
     floatingText: {
         color: 'white',

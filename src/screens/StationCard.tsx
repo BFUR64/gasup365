@@ -66,13 +66,10 @@ export const StationCard: React.FC<Props> = ({ station, onClose, showDistance })
 const styles = StyleSheet.create({
     card: {
         backgroundColor: colors.card,
-        borderRadius: 12,
+        borderRadius: 8,
         borderWidth: 1,
         borderColor: colors.border,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        elevation: 2,
+        boxShadow: '0 2px 10px rgba(31, 41, 51, 0.08)',
     },
     header: {
         flexDirection: 'row',
@@ -96,7 +93,7 @@ const styles = StyleSheet.create({
     priceItem: { flex: 1, alignItems: 'center' },
     priceBorder: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border },
     priceLabel: { fontSize: 10, color: colors.muted, marginBottom: 4 },
-    priceValue: { fontWeight: '600', fontSize: 14, color: colors.text },
+    priceValue: { fontWeight: '700', fontSize: 14, color: colors.primaryDark },
     footer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
