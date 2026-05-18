@@ -2,6 +2,7 @@
 import { Feather } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import * as TextRecognition from 'expo-text-recognition';
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { colors } from '../theme/colors';
@@ -47,40 +48,172 @@ export const CameraCaptureScreen: React.FC = () => {
     }
 
     const takePicture = async () => {
-        if (cameraRef.current && cameraReady) {
-        const photo = await cameraRef.current.takePictureAsync();
-        setCapturedImage(photo.uri);
-        setProcessing(true);
-        // Simulate OCR (replace with real API)
-        setTimeout(() => {
-            setProcessing(false);
-            setExtractedData({
-            stationName: 'Petron Station - Commonwealth',
-            location: 'Commonwealth Ave, Quezon City',
-            prices: { diesel: '62.50', unleaded: '65.20', premium: '75.80' },
-            });
-        }, 2000);
+        if (!cameraRef.current || !cameraReady) return;
+        try {
+            const photo = await cameraRef.current.takePictureAsync();
+            setCapturedImage(photo.uri);
+            await processImage(photo.uri);
+        } catch (error) {
+            console.error('Failed to take picture:', error);
         }
     };
 
     const pickImage = async () => {
-        const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 1,
+    const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 1,
         });
         if (!result.canceled) {
-        setCapturedImage(result.assets[0].uri);
-        setProcessing(true);
-        setTimeout(() => {
-            setProcessing(false);
-            setExtractedData({
-            stationName: 'Petron Station - Commonwealth',
-            location: 'Commonwealth Ave, Quezon City',
-            prices: { diesel: '62.50', unleaded: '65.20', premium: '75.80' },
-            });
-        }, 2000);
+            setCapturedImage(result.assets[0].uri);
+            await processImage(result.assets[0].uri);
         }
     };
+
+    const processImage = async (imageUri: string) => {
+        setProcessing(true);
+        try {
+            const ocrResult = await TextRecognition.getTextFromFrame(imageUri);
+            const fullText = ocrResult.join('\n');
+            console.log('OCR result:', fullText);
+            const parsed = parseGasStationText(fullText);
+            setExtractedData(parsed);
+        } catch (error) {
+            console.error('OCR failed:', error);
+            // Fallback: show empty fields for manual input
+            setExtractedData({
+            stationName: '',
+            location: '',
+            prices: { diesel: '', unleaded: '', premium: '' },
+            });
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    interface GasStationData {
+        stationName: string;
+        location: string;
+        prices: {
+            diesel: string;
+            unleaded: string;
+            premium: string;
+        };
+    }
+
+    function parseGasStationText(text: string): GasStationData {
+        // Normalise the text: replace multiple spaces/newlines, trim
+        const cleaned = text.replace(/\r\n/g, '\n').replace(/\n{2,}/g, '\n').trim();
+        const lines = cleaned.split('\n').map(l => l.trim()).filter(Boolean);
+
+        // --------------------------------------------------
+        // 1. Detect station name by known brands
+        // --------------------------------------------------
+        const brandPatterns: { regex: RegExp; name: string }[] = [
+            { regex: /\b(petron)\b/i, name: 'Petron' },
+            { regex: /\b(shell)\b/i, name: 'Shell' },
+            { regex: /\b(caltex)\b/i, name: 'Caltex' },
+            { regex: /\b(phoenix)\b/i, name: 'Phoenix' },
+            { regex: /\b(seaoil|sea\s*oil)\b/i, name: 'Seaoil' },
+            { regex: /\b(total)\b/i, name: 'Total' },
+            { regex: /\b(uno\s*fuel|uno)\b/i, name: 'Uno Fuel' },
+            { regex: /\b(ptt)\b/i, name: 'PTT' },
+            { regex: /\b(flying\s*v)\b/i, name: 'Flying V' },
+            { regex: /\b(phil\s*petroleum)\b/i, name: 'Phil Petroleum' },
+            { regex: /\b(metro\s*oil)\b/i, name: 'Metro Oil' },
+            { regex: /\b(rephil)\b/i, name: 'Rephil' },
+            { regex: /\b(unioil)\b/i, name: 'Unioil' },
+        ];
+
+        let stationName = 'Unknown Station';
+        for (const { regex, name } of brandPatterns) {
+            if (regex.test(cleaned)) {
+            stationName = name;
+            break;
+            }
+        }
+
+        // If no brand found, try to use the first non‑empty line as station name
+        if (stationName === 'Unknown Station' && lines.length > 0) {
+            // Avoid using lines that are clearly prices or numbers
+            const firstLine = lines[0];
+            if (!/^[\d.,\s₱$P]*$/.test(firstLine)) {
+            stationName = firstLine;
+            }
+        }
+
+        // --------------------------------------------------
+        // 2. Extract location (simple heuristics)
+        // --------------------------------------------------
+        let location = '';
+        // Look for keywords common in addresses
+        const addressKeywords = /(?:ave(?:nue)?|road|st(?:reet)?|blvd|highway|national\s*road|barangay|brgy|city|town|municipality)/i;
+        const addressLine = lines.find(line => addressKeywords.test(line));
+        if (addressLine) {
+            location = addressLine;
+        } else {
+            // Try to find a line that looks like an address (has comma or "Sta.", etc.)
+            const commaLine = lines.find(line => line.includes(','));
+            if (commaLine) location = commaLine;
+        }
+
+        // --------------------------------------------------
+        // 3. Extract prices with flexible regex
+        // --------------------------------------------------
+        const priceMap: Record<string, string> = {
+            diesel: 'N/A',
+            unleaded: 'N/A',
+            premium: 'N/A',
+        };
+
+        // The text can contain "Diesel - P62.50", "Unleaded: 65.20", "Premium 75.80" etc.
+        // Some boards show "DIESEL", "UNLEADED", "PREMIUM" in uppercase.
+        // Some include "Regular" or "RON 91/95" – we map them to our keys.
+        const fuelMappings: { pattern: RegExp; key: string }[] = [
+            { pattern: /\b(?:diesel|diesel\s*fuel)\b/i, key: 'diesel' },
+            { pattern: /\b(?:unleaded|unleaded\s*gasoline|gasoline\s*unleaded|ron\s*91|ron\s*93)\b/i, key: 'unleaded' },
+            { pattern: /\b(?:premium|premium\s*gasoline|ron\s*95|ron\s*97|ron\s*98|v-?power)\b/i, key: 'premium' },
+            // Extra: some stations label "Regular" as unleaded, but we'll map it to unleaded as well
+            { pattern: /\b(?:regular)\b/i, key: 'unleaded' },
+        ];
+
+        // For each fuel type, search in the whole text for the keyword followed by a price
+        for (const { pattern, key } of fuelMappings) {
+            // Build regex: keyword, then any separator (optional colon, dash, space, "P", "₱") and capture a decimal number
+            const priceRegex = new RegExp(
+            pattern.source + /[\s:-]*[₱P]?\s*(\d{2,3}(?:\.\d{2}))/.source,
+            'i'
+            );
+            const match = cleaned.match(priceRegex);
+            if (match) {
+            priceMap[key] = match[1]; // the numeric price string
+            }
+        }
+
+        // If we still miss a price, try a fallback: look for a line that contains the fuel name and a number
+        const allLines = cleaned.split('\n');
+        for (const { pattern, key } of fuelMappings) {
+            if (priceMap[key] !== 'N/A') continue; // already found
+            for (const line of allLines) {
+            if (pattern.test(line)) {
+                const numMatch = line.match(/(\d{2,3}(?:\.\d{2}))/);
+                if (numMatch) {
+                priceMap[key] = numMatch[1];
+                break;
+                }
+            }
+            }
+        }
+
+        return {
+            stationName,
+            location,
+            prices: {
+            diesel: priceMap.diesel,
+            unleaded: priceMap.unleaded,
+            premium: priceMap.premium,
+            },
+        };
+    }
 
     const updatePrice = (fuelType: string, value: string) => {
         setExtractedData((prev: any) => ({
