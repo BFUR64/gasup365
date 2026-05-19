@@ -1,8 +1,7 @@
-// src/app/_layout.tsx
 import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { colors } from '../theme/colors'; // adjust path if needed
+import { colors } from '../theme/colors';
 
 export default function RootLayout() {
   return (
@@ -10,7 +9,7 @@ export default function RootLayout() {
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Feather.glyphMap;
-          if (route.name === 'map') iconName = 'map';
+          if (route.name === 'index' || route.name === 'map') iconName = 'map';
           else if (route.name === 'list') iconName = 'list';
           else if (route.name === 'profile') iconName = 'user';
           else iconName = 'camera';
@@ -19,10 +18,12 @@ export default function RootLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
         headerShown: false,
-        tabBarStyle: { height: 70, paddingBottom: 10, paddingTop: 5 },
+        tabBarStyle: styles.tabBar,
+        tabBarLabelStyle: styles.tabBarLabelStyle,
       })}
     >
-      <Tabs.Screen name="map" options={{ title: 'Map' }} />
+      <Tabs.Screen name="index" options={{ title: 'Home' }} />
+      <Tabs.Screen name="map" options={{ href: null }} />
       <Tabs.Screen name="list" options={{ title: 'List' }} />
       <Tabs.Screen
         name="add"
@@ -48,6 +49,17 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
+  tabBar: {
+    height: 72,
+    paddingBottom: 10,
+    paddingTop: 6,
+    backgroundColor: colors.card,
+    borderTopColor: colors.border,
+  },
+  tabBarLabelStyle: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
   floatingButton: {
     top: -20,
     justifyContent: 'center',
@@ -60,11 +72,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    boxShadow: '0 8px 18px rgba(194, 65, 12, 0.28)',
   },
   floatingText: {
     color: 'white',
