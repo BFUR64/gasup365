@@ -1,6 +1,8 @@
 import { Feather } from '@expo/vector-icons';
+import { signOut } from 'firebase/auth';
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { auth } from '../firebaseservices/firebase';
 import { colors } from '../theme/colors';
 
 const MenuItem: React.FC<{ icon: React.ReactNode; label: string; badge?: string }> = ({ icon, label, badge }) => (
@@ -13,14 +15,17 @@ const MenuItem: React.FC<{ icon: React.ReactNode; label: string; badge?: string 
 );
 
 export const ProfileScreen: React.FC = () => {
+    const user = auth.currentUser;
+    const displayName = user?.displayName || 'GasUp365 Driver';
+
     return (
         <ScrollView style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
             <View style={styles.avatar}>
-            <Text style={styles.avatarText}>👤</Text>
+            <Feather name="user" size={28} color="white" />
             </View>
-            <Text style={styles.name}>Juan Dela Cruz</Text>
+            <Text style={styles.name}>{displayName}</Text>
             <Text style={styles.role}>Community Member</Text>
         </View>
 
@@ -51,6 +56,10 @@ export const ProfileScreen: React.FC = () => {
             <MenuItem icon={<Feather name="settings" size={20} color={colors.muted} />} label="Settings" />
             <MenuItem icon={<Feather name="help-circle" size={20} color={colors.muted} />} label="Help & Support" />
             <MenuItem icon={<Feather name="info" size={20} color={colors.muted} />} label="About GasUp365" />
+            <TouchableOpacity style={styles.menuItem} onPress={() => signOut(auth)}>
+            <View style={styles.menuLeft}><Feather name="log-out" size={20} color={colors.destructive} /></View>
+            <Text style={[styles.menuLabel, styles.signOutText]}>Sign out</Text>
+            </TouchableOpacity>
         </View>
 
         {/* Community Impact */}
@@ -78,7 +87,6 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     header: { backgroundColor: colors.primary, paddingVertical: 24, alignItems: 'center' },
     avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
-    avatarText: { fontSize: 28 },
     name: { fontSize: 20, fontWeight: 'bold', color: 'white', marginTop: 12 },
     role: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
     statsRow: { flexDirection: 'row', paddingHorizontal: 16, marginTop: -20, gap: 12 },
@@ -89,6 +97,7 @@ const styles = StyleSheet.create({
     menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
     menuLeft: { marginRight: 12 },
     menuLabel: { flex: 1, fontSize: 14, color: colors.text },
+    signOutText: { color: colors.destructive, fontWeight: '700' },
     badge: { backgroundColor: colors.primary, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 2, marginRight: 8 },
     badgeText: { color: 'white', fontSize: 10, fontWeight: 'bold' },
     impactCard: { margin: 16, backgroundColor: colors.primaryDark, borderRadius: 8, padding: 16 },
