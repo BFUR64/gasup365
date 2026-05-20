@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { stations } from '../data/mockStations';
 import { colors } from '../theme/colors';
@@ -18,13 +18,21 @@ export const MapViewScreen: React.FC = () => {
     ];
 
     const selectedStation = stations.find(station => station.id === selectedStationId);
+    const filteredStations = useMemo(() => {
+        if (selectedFuelType === 'all') return stations;
+        return stations.filter(station => station.prices[selectedFuelType as keyof typeof station.prices] > 0);
+    }, [selectedFuelType]);
+    const lowestDiesel = useMemo(
+        () => Math.min(...stations.map(station => station.prices.diesel)),
+        [],
+    );
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.title}>GasUp365</Text>
-                    <Text style={styles.subtitle}>Find the best nearby fuel price</Text>
+                    <Text style={styles.title}>Kalibo Fuel Dashboard</Text>
+                    <Text style={styles.subtitle}>Live fuel stations around Aklan&apos;s capital</Text>
                 </View>
 
                 <TouchableOpacity style={styles.filterButton}>
@@ -33,9 +41,26 @@ export const MapViewScreen: React.FC = () => {
 
                 <TouchableOpacity style={styles.locationBar}>
                     <Feather name="navigation" size={16} color="white" />
-                    <Text style={styles.locationText}>Quezon City, Metro Manila</Text>
+                    <Text style={styles.locationText}>Kalibo, Aklan, Philippines</Text>
                     <Feather name="chevron-down" size={16} color="white" />
                 </TouchableOpacity>
+            </View>
+
+            <View style={styles.dashboardStrip}>
+                <View style={styles.metricBlock}>
+                    <Text style={styles.metricValue}>{stations.length}</Text>
+                    <Text style={styles.metricLabel}>Live stations</Text>
+                </View>
+                <View style={styles.metricDivider} />
+                <View style={styles.metricBlock}>
+                    <Text style={styles.metricValue}>₱{lowestDiesel.toFixed(2)}</Text>
+                    <Text style={styles.metricLabel}>Lowest diesel</Text>
+                </View>
+                <View style={styles.metricDivider} />
+                <View style={styles.metricBlock}>
+                    <Text style={styles.metricValue}>15</Text>
+                    <Text style={styles.metricLabel}>Map zoom</Text>
+                </View>
             </View>
 
             <View style={styles.filterContainer}>
@@ -63,6 +88,7 @@ export const MapViewScreen: React.FC = () => {
             <StationMap
                 selectedStationId={selectedStationId}
                 onSelectStation={setSelectedStationId}
+                stations={filteredStations}
             />
 
             {selectedStation && (
@@ -83,10 +109,10 @@ const styles = StyleSheet.create({
         backgroundColor: colors.primary,
         paddingHorizontal: 16,
         paddingTop: 48,
-        paddingBottom: 14,
+        paddingBottom: 16,
         gap: 14,
     },
-    title: { fontSize: 24, fontWeight: '800', color: 'white' },
+    title: { fontSize: 23, fontWeight: '800', color: 'white' },
     subtitle: { fontSize: 13, color: 'rgba(255,255,255,0.82)', marginTop: 3 },
     filterButton: {
         position: 'absolute',
@@ -106,6 +132,35 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     locationText: { flex: 1, fontSize: 14, color: 'white' },
+    dashboardStrip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.card,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+    metricBlock: { flex: 1, gap: 2 },
+    metricValue: {
+        color: colors.primaryDark,
+        fontSize: 17,
+        fontWeight: '900',
+        textAlign: 'center',
+        fontVariant: ['tabular-nums'],
+    },
+    metricLabel: {
+        color: colors.muted,
+        fontSize: 10,
+        fontWeight: '700',
+        textAlign: 'center',
+        textTransform: 'uppercase',
+    },
+    metricDivider: {
+        width: 1,
+        height: 28,
+        backgroundColor: colors.border,
+    },
     filterContainer: {
         flexDirection: 'row',
         paddingHorizontal: 16,
