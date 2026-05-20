@@ -1,3 +1,3 @@
-import { MapViewScreen } from '../screens/MapViewScreen';
+import { DashboardScreen } from '../screens/DashboardScreen';
 
-export default MapViewScreen;
+export default DashboardScreen;

@@ -13,4 +13,8 @@ export interface Station {
         x: number;   // percentage 0-100 for map simulation
         y: number;
     };
+    coordinates: {
+        latitude: number;
+        longitude: number;
+    };
 }
