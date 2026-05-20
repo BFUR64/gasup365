@@ -1,9 +1,37 @@
 import { Feather } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { User, onAuthStateChanged } from 'firebase/auth';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { auth } from '../firebaseservices/firebase';
+import { AuthScreen } from '../screens/AuthScreen';
 import { colors } from '../theme/colors';
 
 export default function RootLayout() {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      setUser(nextUser);
+      setIsLoadingAuth(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  if (isLoadingAuth) {
+    return (
+      <View style={styles.loadingScreen}>
+        <ActivityIndicator color={colors.primary} size="large" />
+      </View>
+    );
+  }
+
+  if (!user) {
+    return <AuthScreen />;
+  }
+
   return (
     <Tabs
       screenOptions={({ route }) => ({
@@ -49,6 +77,12 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
+  loadingScreen: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+  },
   tabBar: {
     height: 72,
     paddingBottom: 10,
