@@ -27,6 +27,18 @@
     "plugins": [
       "expo-router",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow GasUp365 to scan fuel price boards."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow GasUp365 to place station updates on the map."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#F97316",
