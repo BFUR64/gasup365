@@ -7,7 +7,20 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { db } from '../services/firebase';
 import { formatExtractionSummary, parseFuelPricesFromText, sampleOcrText } from '../services/priceExtraction';
+import React, { useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { db } from '../services/firebase';
+import { getMissingGasStationFields, type Coordinates, type ParsedGasStationText } from '../services/gasStationParser';
+import { processGasStationCapture } from '../services/receiptOcr';
 import { colors } from '../theme/colors';
+
+const emptyParsedText: ParsedGasStationText = {
+  stationName: null,
+  address: null,
+  location: null,
+  fuels: [],
+  rawText: '',
+};
 
 export const CameraCaptureScreen: React.FC = () => {
     const router = useRouter();
@@ -143,15 +156,65 @@ export const CameraCaptureScreen: React.FC = () => {
             Alert.alert('Unable to save', 'Please try adding the marker again.');
         } finally {
             setIsSaving(false);
-        }
-    };
+  const router = useRouter();
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [cameraRef, setCameraRef] = useState<CameraView | null>(null);
+  const [stationName, setStationName] = useState('');
+  const [address, setAddress] = useState('');
+  const [diesel, setDiesel] = useState('');
+  const [unleaded, setUnleaded] = useState('');
+  const [premium, setPremium] = useState('');
+  const [capturedImageUri, setCapturedImageUri] = useState<string | null>(null);
+  const [capturedLocation, setCapturedLocation] = useState<Coordinates | null>(null);
+  const [parsedText, setParsedText] = useState<ParsedGasStationText>(emptyParsedText);
+  const [isScanning, setIsScanning] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-    return (
-        <View style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Add Fuel Price</Text>
-                <Text style={styles.headerSub}>Share a quick GasUp365 station update</Text>
-            </View>
+  const missingFields = useMemo(() => getMissingGasStationFields(parsedText), [parsedText]);
+
+  const captureAndParse = async () => {
+    if (isScanning) return;
+
+    setIsScanning(true);
+
+    try {
+      if (!cameraPermission?.granted) {
+        const nextPermission = await requestCameraPermission();
+        if (!nextPermission.granted) {
+          Alert.alert('Camera permission needed', 'Allow camera access to scan a receipt or price board.');
+          return;
+        }
+      }
+
+      const photo = await cameraRef?.takePictureAsync({ quality: 0.82, exif: true });
+      if (!photo?.uri) {
+        Alert.alert('Camera not ready', 'Please wait for the camera preview, then try again.');
+        return;
+      }
+
+      const fallbackLocation = await getDeviceLocation();
+      const parsed = await processGasStationCapture(
+        { uri: photo.uri, exif: photo.exif as Record<string, unknown> | null },
+        { fallbackLocation },
+      );
+
+      const fuelByType = new Map(parsed.fuels.map((fuel) => [fuel.type, fuel.price.toFixed(2)]));
+
+      setCapturedImageUri(photo.uri);
+      setCapturedLocation(parsed.location || fallbackLocation);
+      setParsedText(parsed);
+      setStationName(parsed.stationName || '');
+      setAddress(parsed.address || '');
+      setDiesel(fuelByType.get('diesel') || '');
+      setUnleaded(fuelByType.get('unleaded') || '');
+      setPremium(fuelByType.get('special') || '');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The OCR scan failed. You can still enter the values manually.';
+      Alert.alert('Unable to scan text', message);
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
             <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.capturePanel}>
@@ -260,8 +323,151 @@ export const CameraCaptureScreen: React.FC = () => {
                     </>
                 )}
             </TouchableOpacity>
+          )}
         </View>
-    );
+
+        <TouchableOpacity
+          style={[styles.scanButton, isScanning && styles.submitButtonDisabled]}
+          onPress={captureAndParse}
+          disabled={isScanning}
+        >
+          {isScanning ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <>
+              <Feather name="zap" size={18} color="white" />
+              <Text style={styles.scanButtonText}>Scan Text and Prefill</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        {parsedText.rawText ? (
+          <View style={styles.noticeCard}>
+            <Text style={styles.noticeTitle}>Review extracted data</Text>
+            <Text style={styles.noticeText} selectable>
+              {buildReviewMessage(missingFields)}
+            </Text>
+          </View>
+        ) : null}
+
+        <View style={styles.formCard}>
+          <Text style={styles.label}>Station Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g. Petron Kalibo"
+            placeholderTextColor={colors.muted}
+            value={stationName}
+            onChangeText={setStationName}
+          />
+
+          <Text style={styles.label}>Location</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Roxas Avenue, Kalibo, Aklan"
+            placeholderTextColor={colors.muted}
+            value={address}
+            onChangeText={setAddress}
+          />
+
+          <View style={styles.priceGrid}>
+            <View style={styles.priceField}>
+              <Text style={styles.label}>Diesel</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="62.50"
+                placeholderTextColor={colors.muted}
+                keyboardType="numeric"
+                value={diesel}
+                onChangeText={setDiesel}
+              />
+            </View>
+            <View style={styles.priceField}>
+              <Text style={styles.label}>Unleaded</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="65.20"
+                placeholderTextColor={colors.muted}
+                keyboardType="numeric"
+                value={unleaded}
+                onChangeText={setUnleaded}
+              />
+            </View>
+            <View style={styles.priceField}>
+              <Text style={styles.label}>Special / Premium</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="75.80"
+                placeholderTextColor={colors.muted}
+                keyboardType="numeric"
+                value={premium}
+                onChangeText={setPremium}
+              />
+            </View>
+          </View>
+        </View>
+
+        {parsedText.rawText ? (
+          <View style={styles.rawTextCard}>
+            <Text style={styles.label}>Raw OCR Text</Text>
+            <Text style={styles.rawText} selectable>
+              {parsedText.rawText}
+            </Text>
+          </View>
+        ) : null}
+      </ScrollView>
+
+      <TouchableOpacity
+        style={[styles.submitButton, isSaving && styles.submitButtonDisabled]}
+        onPress={submitUpdate}
+        disabled={isSaving}
+      >
+        {isSaving ? (
+          <ActivityIndicator color="white" />
+        ) : (
+          <>
+            <Feather name="map-pin" size={20} color="white" />
+            <Text style={styles.submitText}>Save Live Map Marker</Text>
+          </>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+const getDeviceLocation = async (): Promise<Coordinates | null> => {
+  const locationPermission = await Location.requestForegroundPermissionsAsync();
+  if (locationPermission.status !== 'granted') return null;
+
+  const currentLocation = await Location.getCurrentPositionAsync({
+    accuracy: Location.Accuracy.Balanced,
+  });
+
+  return {
+    latitude: currentLocation.coords.latitude,
+    longitude: currentLocation.coords.longitude,
+  };
+};
+
+const toPriceOrNull = (value: string) => {
+  const price = Number(value.replace(/,/g, '').trim());
+  return Number.isFinite(price) ? price : null;
+};
+
+const buildReviewMessage = (missingFields: ReturnType<typeof getMissingGasStationFields>) => {
+  const missingLabels = [
+    missingFields.stationName ? 'station name' : '',
+    missingFields.address ? 'address' : '',
+    missingFields.location ? 'GPS location' : '',
+    missingFields.unleaded ? 'unleaded price' : '',
+    missingFields.special ? 'special/premium price' : '',
+    missingFields.diesel ? 'diesel price' : '',
+  ].filter(Boolean);
+
+  if (!missingLabels.length) {
+    return 'Everything important was detected. Please confirm the fields before saving.';
+  }
+
+  return `Please fill or verify: ${missingLabels.join(', ')}.`;
 };
 
 const styles = StyleSheet.create({
