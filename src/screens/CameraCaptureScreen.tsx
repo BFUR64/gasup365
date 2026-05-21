@@ -4,7 +4,7 @@ import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import React, { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { db } from '../services/firebase';
 import {
   getMissingGasStationFields,
@@ -24,6 +24,7 @@ const emptyParsedText: ParsedGasStationText = {
 };
 
 const parserName = 'expo-text-recognition + gas-station-keyword-nlp';
+const isWeb = Platform.OS === 'web';
 
 export const CameraCaptureScreen: React.FC = () => {
   const router = useRouter();
@@ -46,6 +47,11 @@ export const CameraCaptureScreen: React.FC = () => {
 
   const captureAndParse = async () => {
     if (isScanning) return null;
+
+    if (isWeb) {
+      Alert.alert('OCR unavailable on web', 'Camera OCR is not available on web. Please use the mobile app.');
+      return null;
+    }
 
     setIsScanning(true);
 
@@ -197,7 +203,15 @@ export const CameraCaptureScreen: React.FC = () => {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.capturePanel}>
-          {cameraPermission?.granted ? (
+          {isWeb ? (
+            <View style={styles.webUnavailablePanel}>
+              <View style={styles.iconCircle}>
+                <Feather name="smartphone" size={28} color={colors.primaryDark} />
+              </View>
+              <Text style={styles.panelTitle}>Mobile OCR only</Text>
+              <Text style={styles.panelText}>Camera OCR is not available on web. Please use the mobile app.</Text>
+            </View>
+          ) : cameraPermission?.granted ? (
             <CameraView
               ref={cameraRef}
               style={styles.cameraPreview}
@@ -227,7 +241,7 @@ export const CameraCaptureScreen: React.FC = () => {
             <TouchableOpacity
               style={[styles.scanButton, (isScanning || isSaving) && styles.submitButtonDisabled]}
               onPress={captureAndParse}
-              disabled={isScanning || isSaving}
+              disabled={isWeb || isScanning || isSaving}
             >
               {isScanning ? (
                 <ActivityIndicator color="white" size="small" />
@@ -407,6 +421,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.text,
   },
   permissionButton: {
+    width: '100%',
+    alignItems: 'center',
+    padding: 18,
+  },
+  webUnavailablePanel: {
     width: '100%',
     alignItems: 'center',
     padding: 18,

@@ -1,4 +1,3 @@
-import { getTextFromFrame } from 'expo-text-recognition';
 import type { Coordinates, ParsedGasStationText } from './gasStationParser';
 import { parseGasStationText } from './gasStationParser';
 
@@ -10,6 +9,11 @@ export interface CapturedGasStationImage {
 export type RecognizeText = (uri: string) => Promise<string[] | string>;
 
 export const recognizeGasStationText: RecognizeText = async (uri) => {
+  if (isWebRuntime()) {
+    throw new Error('Camera OCR is not available on web. Please use the mobile app.');
+  }
+
+  const { getTextFromFrame } = await import('expo-text-recognition');
   return getTextFromFrame(uri, false);
 };
 
@@ -29,3 +33,5 @@ export const processGasStationCapture = async (
     fallbackLocation: options.fallbackLocation,
   });
 };
+
+const isWebRuntime = () => typeof window !== 'undefined' && typeof document !== 'undefined';
