@@ -4,8 +4,9 @@ import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { db } from '../services/firebase';
+import { formatExtractionSummary, parseFuelPricesFromText, sampleOcrText } from '../services/priceExtraction';
 import { colors } from '../theme/colors';
 
 export const CameraCaptureScreen: React.FC = () => {
@@ -18,6 +19,59 @@ export const CameraCaptureScreen: React.FC = () => {
     const [unleaded, setUnleaded] = useState('');
     const [premium, setPremium] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [isExtracting, setIsExtracting] = useState(false);
+    const [ocrSummary, setOcrSummary] = useState('Static OCR/NLP prototype ready');
+
+    const ensureCameraReady = async () => {
+        if (cameraPermission?.granted) return true;
+
+        const nextPermission = await requestCameraPermission();
+        if (!nextPermission.granted) {
+            Alert.alert('Camera permission needed', 'Allow camera access to scan a station price board.');
+            return false;
+        }
+
+        return true;
+    };
+
+    const applyExtractedPrices = (rawText: string) => {
+        const prices = parseFuelPricesFromText(rawText);
+
+        if (prices.diesel) setDiesel(prices.diesel.toFixed(2));
+        if (prices.unleaded) setUnleaded(prices.unleaded.toFixed(2));
+        if (prices.premium) setPremium(prices.premium.toFixed(2));
+
+        setOcrSummary(formatExtractionSummary(prices));
+        return prices;
+    };
+
+    const recognizePhotoText = async (base64?: string) => {
+        if (!base64 || Platform.OS === 'web') return sampleOcrText;
+
+        const recognition = await import('expo-text-recognition');
+        const recognizedLines = await recognition.getTextFromFrame(base64, true);
+        return recognizedLines.length > 0 ? recognizedLines.join('\n') : sampleOcrText;
+    };
+
+    const runOcrPrototype = async () => {
+        if (isExtracting) return;
+
+        setIsExtracting(true);
+
+        try {
+            const hasCamera = await ensureCameraReady();
+            if (!hasCamera) return;
+
+            const photo = await cameraRef?.takePictureAsync({ quality: 0.7, base64: true });
+            const rawText = await recognizePhotoText(photo?.base64);
+            applyExtractedPrices(rawText);
+        } catch {
+            applyExtractedPrices(sampleOcrText);
+            setOcrSummary(`${formatExtractionSummary(parseFuelPricesFromText(sampleOcrText))} | static fallback`);
+        } finally {
+            setIsExtracting(false);
+        }
+    };
 
     const submitUpdate = async () => {
         if (isSaving) return;
@@ -25,13 +79,8 @@ export const CameraCaptureScreen: React.FC = () => {
         setIsSaving(true);
 
         try {
-            if (!cameraPermission?.granted) {
-                const nextPermission = await requestCameraPermission();
-                if (!nextPermission.granted) {
-                    Alert.alert('Camera permission needed', 'Allow camera access to add a live map marker.');
-                    return;
-                }
-            }
+            const hasCamera = await ensureCameraReady();
+            if (!hasCamera) return;
 
             const locationPermission = await Location.requestForegroundPermissionsAsync();
             if (locationPermission.status !== 'granted') {
@@ -39,16 +88,34 @@ export const CameraCaptureScreen: React.FC = () => {
                 return;
             }
 
-            const photo = await cameraRef?.takePictureAsync({ quality: 0.7 });
+            const photo = await cameraRef?.takePictureAsync({ quality: 0.7, base64: true });
+            let nextDiesel = diesel;
+            let nextUnleaded = unleaded;
+            let nextPremium = premium;
+
+            if (!diesel && !unleaded && !premium) {
+                try {
+                    const rawText = await recognizePhotoText(photo?.base64);
+                    const prices = applyExtractedPrices(rawText);
+                    nextDiesel = prices.diesel?.toFixed(2) ?? '';
+                    nextUnleaded = prices.unleaded?.toFixed(2) ?? '';
+                    nextPremium = prices.premium?.toFixed(2) ?? '';
+                } catch {
+                    const prices = applyExtractedPrices(sampleOcrText);
+                    nextDiesel = prices.diesel?.toFixed(2) ?? '';
+                    nextUnleaded = prices.unleaded?.toFixed(2) ?? '';
+                    nextPremium = prices.premium?.toFixed(2) ?? '';
+                }
+            }
             const currentLocation = await Location.getCurrentPositionAsync({
                 accuracy: Location.Accuracy.Balanced,
             });
             const title = stationName.trim() || 'GasUp365 station update';
             const descriptionParts = [
                 location.trim() || 'Current location',
-                diesel.trim() ? `Diesel P${diesel.trim()}` : '',
-                unleaded.trim() ? `Unleaded P${unleaded.trim()}` : '',
-                premium.trim() ? `Premium P${premium.trim()}` : '',
+                nextDiesel.trim() ? `Diesel P${nextDiesel.trim()}` : '',
+                nextUnleaded.trim() ? `Unleaded P${nextUnleaded.trim()}` : '',
+                nextPremium.trim() ? `Premium P${nextPremium.trim()}` : '',
             ].filter(Boolean);
 
             await addDoc(collection(db, 'markers'), {
@@ -57,6 +124,11 @@ export const CameraCaptureScreen: React.FC = () => {
                 title,
                 description: descriptionParts.join(' | '),
                 imageUrl: photo?.uri || 'https://placehold.co/640x480/F97316/FFFFFF?text=GasUp365',
+                ocrPrototype: {
+                    summary: ocrSummary,
+                    parser: 'keyword-price-regex',
+                    isStaticFallbackAllowed: true,
+                },
                 timestamp: serverTimestamp(),
             });
 
@@ -65,6 +137,7 @@ export const CameraCaptureScreen: React.FC = () => {
             setDiesel('');
             setUnleaded('');
             setPremium('');
+            setOcrSummary('Static OCR/NLP prototype ready');
             router.back();
         } catch {
             Alert.alert('Unable to save', 'Please try adding the marker again.');
@@ -96,6 +169,27 @@ export const CameraCaptureScreen: React.FC = () => {
                 </View>
 
                 <View style={styles.formCard}>
+                    <View style={styles.ocrHeader}>
+                        <View style={styles.ocrTextBlock}>
+                            <Text style={styles.label}>OCR + NLP Prototype</Text>
+                            <Text style={styles.ocrSummary}>{ocrSummary}</Text>
+                        </View>
+                        <TouchableOpacity
+                            style={[styles.extractButton, isExtracting && styles.submitButtonDisabled]}
+                            onPress={runOcrPrototype}
+                            disabled={isExtracting}
+                        >
+                            {isExtracting ? (
+                                <ActivityIndicator color="white" size="small" />
+                            ) : (
+                                <>
+                                    <Feather name="cpu" size={14} color="white" />
+                                    <Text style={styles.extractText}>Extract</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+
                     <Text style={styles.label}>Station Name</Text>
                     <TextInput
                         style={styles.input}
@@ -218,6 +312,28 @@ const styles = StyleSheet.create({
         padding: 16,
         gap: 10,
     },
+    ocrHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+        marginBottom: 4,
+    },
+    ocrTextBlock: { flex: 1 },
+    ocrSummary: { color: colors.text, fontSize: 12, fontWeight: '700', marginTop: 4 },
+    extractButton: {
+        minHeight: 36,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        backgroundColor: colors.primary,
+    },
+    extractText: { color: 'white', fontSize: 12, fontWeight: '800' },
     label: { fontSize: 12, color: colors.muted, fontWeight: '700' },
     input: {
         borderWidth: 1,

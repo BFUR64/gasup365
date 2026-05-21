@@ -1,21 +1,44 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LiveMap } from '../components/LiveMap';
+import { stations } from '../data/mockStations';
 import { useMapMarkers } from '../hooks/useMapMarkers';
+import { buildGoogleMapsDirectionsUrl, scoreStationsForRoute } from '../services/fuelRouting';
 import { colors } from '../theme/colors';
 
 const DEFAULT_CENTER: [number, number] = [11.7089, 122.364];
+const stationMarkerId = (stationId: number) => `station-${stationId}`;
 
 export const DashboardScreen: React.FC = () => {
   const router = useRouter();
   const { markers, loading, error } = useMapMarkers();
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
 
+  const routeScores = useMemo(() => scoreStationsForRoute(stations, 'diesel'), []);
+  const bestRouteScore = routeScores[0];
+  const staticStationMarkers = useMemo(
+    () => routeScores.map(score => ({
+      id: stationMarkerId(score.station.id),
+      lat: score.station.coordinates.latitude,
+      lng: score.station.coordinates.longitude,
+      title: `${score.station.name} - Diesel P${score.fuelPrice.toFixed(2)}`,
+      description: `Save P${Math.max(0, score.pesosSaved).toFixed(0)} net after travel cost | ${score.station.lastUpdated}`,
+    })),
+    [routeScores],
+  );
+  const combinedMarkers = useMemo(
+    () => [...staticStationMarkers, ...markers],
+    [markers, staticStationMarkers],
+  );
+  const selectedStationScore = useMemo(
+    () => routeScores.find(score => stationMarkerId(score.station.id) === selectedMarkerId),
+    [routeScores, selectedMarkerId],
+  );
   const selectedMarker = useMemo(
-    () => markers.find((marker) => marker.id === selectedMarkerId),
-    [markers, selectedMarkerId],
+    () => combinedMarkers.find((marker) => marker.id === selectedMarkerId),
+    [combinedMarkers, selectedMarkerId],
   );
 
   const handleMarkerPress = useCallback((markerId: string) => {
@@ -25,7 +48,7 @@ export const DashboardScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <LiveMap
-        markers={markers}
+        markers={combinedMarkers}
         center={DEFAULT_CENTER}
         zoom={13}
         onMarkerPress={handleMarkerPress}
@@ -34,15 +57,21 @@ export const DashboardScreen: React.FC = () => {
       <View style={styles.headerPanel}>
         <View>
           <Text style={styles.eyebrow}>GasUp365</Text>
-          <Text style={styles.title}>Live Map Dashboard</Text>
+          <Text style={styles.title}>Live Price Map</Text>
         </View>
         <View style={styles.countPill}>
           {loading ? (
             <ActivityIndicator color={colors.primary} size="small" />
           ) : (
-            <Text style={styles.countText}>{markers.length}</Text>
+            <Text style={styles.countText}>{combinedMarkers.length}</Text>
           )}
         </View>
+      </View>
+
+      <View style={styles.smartPanel}>
+        <Text style={styles.smartLabel}>Smart diesel route</Text>
+        <Text style={styles.smartValue}>{bestRouteScore?.station.name}</Text>
+        <Text style={styles.smartMeta}>Net savings P{Math.max(0, bestRouteScore?.pesosSaved ?? 0).toFixed(0)} after estimated travel cost</Text>
       </View>
 
       {error ? (
@@ -53,16 +82,19 @@ export const DashboardScreen: React.FC = () => {
         </View>
       ) : null}
 
-      {!loading && !error && markers.length === 0 ? (
-        <View style={styles.notice}>
-          <Text style={styles.emptyText}>No markers yet</Text>
-        </View>
-      ) : null}
-
       {selectedMarker ? (
-        <Pressable style={styles.markerCard} onPress={() => setSelectedMarkerId(null)}>
+        <Pressable
+          style={styles.markerCard}
+          onPress={() => {
+            if (selectedStationScore) {
+              Linking.openURL(buildGoogleMapsDirectionsUrl(selectedStationScore.station));
+              return;
+            }
+            setSelectedMarkerId(null);
+          }}
+        >
           <View style={styles.markerIcon}>
-            <Feather name="map-pin" size={18} color="white" />
+            <Feather name={selectedStationScore ? 'navigation' : 'map-pin'} size={18} color="white" />
           </View>
           <View style={styles.markerTextBlock}>
             <Text style={styles.markerTitle}>{selectedMarker.title}</Text>
@@ -70,13 +102,13 @@ export const DashboardScreen: React.FC = () => {
               <Text style={styles.markerDescription}>{selectedMarker.description}</Text>
             ) : null}
           </View>
-          <Feather name="x" size={18} color={colors.muted} />
+          <Feather name={selectedStationScore ? 'external-link' : 'x'} size={18} color={colors.muted} />
         </Pressable>
       ) : null}
 
       <Pressable style={styles.cameraButton} onPress={() => router.push('/add')}>
         <Feather name="camera" size={22} color="white" />
-        <Text style={styles.cameraButtonText}>Add Marker</Text>
+        <Text style={styles.cameraButtonText}>Scan Price</Text>
       </Pressable>
     </View>
   );
@@ -129,9 +161,24 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontVariant: ['tabular-nums'],
   },
-  notice: {
+  smartPanel: {
     position: 'absolute',
     top: 140,
+    left: 16,
+    right: 16,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  smartLabel: { color: colors.muted, fontSize: 11, fontWeight: '900', textTransform: 'uppercase' },
+  smartValue: { color: colors.text, fontSize: 15, fontWeight: '900', marginTop: 2 },
+  smartMeta: { color: colors.success, fontSize: 12, fontWeight: '800', marginTop: 3 },
+  notice: {
+    position: 'absolute',
+    top: 226,
     left: 16,
     right: 16,
     borderRadius: 8,
@@ -140,12 +187,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     paddingHorizontal: 12,
     paddingVertical: 10,
-  },
-  emptyText: {
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'center',
   },
   errorText: {
     color: colors.destructive,

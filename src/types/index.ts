@@ -17,4 +17,27 @@ export interface Station {
         latitude: number;
         longitude: number;
     };
+    source?: 'static-prototype' | 'camera-ocr';
+    trustScore?: number;
+}
+
+export type FuelType = 'diesel' | 'unleaded' | 'premium';
+
+export interface StationRouteScore {
+    station: Station;
+    fuelType: FuelType;
+    fuelPrice: number;
+    areaAveragePrice: number;
+    liters: number;
+    distanceKm: number;
+    estimatedTravelCost: number;
+    grossFuelSavings: number;
+    pesosSaved: number;
+    isBestRoute: boolean;
+}
+
+export interface ExtractedFuelPrices {
+    diesel?: number;
+    unleaded?: number;
+    premium?: number;
 }
