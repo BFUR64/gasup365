@@ -15,6 +15,8 @@ export const stations: Station[] = [
         prices: { diesel: 61.9, unleaded: 64.8, premium: 73.6 },
         mapPosition: { x: 46, y: 42 },
         coordinates: { latitude: 11.7052, longitude: 122.3661 },
+        source: 'static-prototype',
+        trustScore: 92,
     },
     {
         id: 2,
@@ -25,6 +27,8 @@ export const stations: Station[] = [
         prices: { diesel: 62.4, unleaded: 65.1, premium: 74.2 },
         mapPosition: { x: 58, y: 35 },
         coordinates: { latitude: 11.7084, longitude: 122.3609 },
+        source: 'static-prototype',
+        trustScore: 86,
     },
     {
         id: 3,
@@ -35,6 +39,8 @@ export const stations: Station[] = [
         prices: { diesel: 61.5, unleaded: 64.3, premium: 73.9 },
         mapPosition: { x: 36, y: 62 },
         coordinates: { latitude: 11.7008, longitude: 122.3694 },
+        source: 'static-prototype',
+        trustScore: 89,
     },
     {
         id: 4,
@@ -45,5 +51,7 @@ export const stations: Station[] = [
         prices: { diesel: 62.1, unleaded: 65.5, premium: 75.1 },
         mapPosition: { x: 67, y: 56 },
         coordinates: { latitude: 11.712, longitude: 122.3713 },
+        source: 'static-prototype',
+        trustScore: 81,
     },
 ];

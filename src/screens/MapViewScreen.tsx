@@ -1,30 +1,34 @@
 import { Feather } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { stations } from '../data/mockStations';
+import { buildGoogleMapsDirectionsUrl, fuelLabels, scoreStationsForRoute } from '../services/fuelRouting';
 import { colors } from '../theme/colors';
+import { FuelType } from '../types';
 import { StationCard } from './StationCard';
 import { StationMap } from './StationMap';
 
 export const MapViewScreen: React.FC = () => {
-    const [selectedFuelType, setSelectedFuelType] = useState<string>('all');
+    const [selectedFuelType, setSelectedFuelType] = useState<FuelType>('diesel');
     const [selectedStationId, setSelectedStationId] = useState<number | null>(null);
 
     const fuelTypes = [
-        { id: 'all', label: 'All' },
-        { id: 'diesel', label: 'Diesel' },
-        { id: 'unleaded', label: 'Unleaded' },
-        { id: 'premium', label: 'Premium' },
+        { id: 'diesel' as const, label: 'Diesel' },
+        { id: 'unleaded' as const, label: 'Unleaded' },
+        { id: 'premium' as const, label: 'Premium' },
     ];
 
+    const routeScores = useMemo(
+        () => scoreStationsForRoute(stations, selectedFuelType),
+        [selectedFuelType],
+    );
+    const filteredStations = routeScores.map(score => score.station);
     const selectedStation = stations.find(station => station.id === selectedStationId);
-    const filteredStations = useMemo(() => {
-        if (selectedFuelType === 'all') return stations;
-        return stations.filter(station => station.prices[selectedFuelType as keyof typeof station.prices] > 0);
-    }, [selectedFuelType]);
-    const lowestDiesel = useMemo(
-        () => Math.min(...stations.map(station => station.prices.diesel)),
-        [],
+    const selectedRouteScore = routeScores.find(score => score.station.id === selectedStationId);
+    const bestRouteScore = routeScores[0];
+    const lowestFuelPrice = useMemo(
+        () => Math.min(...stations.map(station => station.prices[selectedFuelType])),
+        [selectedFuelType],
     );
 
     return (
@@ -32,7 +36,7 @@ export const MapViewScreen: React.FC = () => {
             <View style={styles.header}>
                 <View>
                     <Text style={styles.title}>Kalibo Fuel Dashboard</Text>
-                    <Text style={styles.subtitle}>Live fuel stations around Aklan&apos;s capital</Text>
+                    <Text style={styles.subtitle}>Live prices, list, and smart route savings</Text>
                 </View>
 
                 <TouchableOpacity style={styles.filterButton}>
@@ -53,13 +57,13 @@ export const MapViewScreen: React.FC = () => {
                 </View>
                 <View style={styles.metricDivider} />
                 <View style={styles.metricBlock}>
-                    <Text style={styles.metricValue}>₱{lowestDiesel.toFixed(2)}</Text>
-                    <Text style={styles.metricLabel}>Lowest diesel</Text>
+                    <Text style={styles.metricValue}>P{lowestFuelPrice.toFixed(2)}</Text>
+                    <Text style={styles.metricLabel}>Lowest {fuelLabels[selectedFuelType]}</Text>
                 </View>
                 <View style={styles.metricDivider} />
                 <View style={styles.metricBlock}>
-                    <Text style={styles.metricValue}>15</Text>
-                    <Text style={styles.metricLabel}>Map zoom</Text>
+                    <Text style={styles.metricValue}>P{Math.max(0, bestRouteScore?.pesosSaved ?? 0).toFixed(0)}</Text>
+                    <Text style={styles.metricLabel}>Best net save</Text>
                 </View>
             </View>
 
@@ -89,6 +93,8 @@ export const MapViewScreen: React.FC = () => {
                 selectedStationId={selectedStationId}
                 onSelectStation={setSelectedStationId}
                 stations={filteredStations}
+                fuelType={selectedFuelType}
+                routeScores={routeScores}
             />
 
             {selectedStation && (
@@ -96,6 +102,8 @@ export const MapViewScreen: React.FC = () => {
                     <StationCard
                         station={selectedStation}
                         onClose={() => setSelectedStationId(null)}
+                        onNavigate={() => Linking.openURL(buildGoogleMapsDirectionsUrl(selectedStation))}
+                        routeScore={selectedRouteScore}
                     />
                 </View>
             )}
@@ -173,7 +181,7 @@ const styles = StyleSheet.create({
     filterChip: {
         paddingHorizontal: 16,
         paddingVertical: 8,
-        borderRadius: 999,
+        borderRadius: 8,
         backgroundColor: colors.accent,
     },
     filterChipActive: { backgroundColor: colors.primary },
