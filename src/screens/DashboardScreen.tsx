@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LiveMap } from '../components/LiveMap';
 import { stations } from '../data/mockStations';
 import { useMapMarkers } from '../hooks/useMapMarkers';
@@ -54,24 +54,33 @@ export const DashboardScreen: React.FC = () => {
         onMarkerPress={handleMarkerPress}
       />
 
-      <View style={styles.headerPanel}>
-        <View>
-          <Text style={styles.eyebrow}>GasUp365</Text>
-          <Text style={styles.title}>Live Price Map</Text>
+      <View style={styles.topStack}>
+        <View style={styles.headerPanel}>
+          <View>
+            <View style={styles.logoBox}>
+              <Image
+                source={require('../../assets/images/Gasup.png')}
+                style={styles.headerLogo}
+                resizeMode="contain"
+                accessibilityLabel="GasUp"
+              />
+            </View>
+            <Text style={styles.title}>Live Price Map</Text>
+          </View>
+          <View style={styles.countPill}>
+            {loading ? (
+              <ActivityIndicator color={colors.primary} size="small" />
+            ) : (
+              <Text style={styles.countText}>{combinedMarkers.length}</Text>
+            )}
+          </View>
         </View>
-        <View style={styles.countPill}>
-          {loading ? (
-            <ActivityIndicator color={colors.primary} size="small" />
-          ) : (
-            <Text style={styles.countText}>{combinedMarkers.length}</Text>
-          )}
-        </View>
-      </View>
 
-      <View style={styles.smartPanel}>
-        <Text style={styles.smartLabel}>Smart diesel route</Text>
-        <Text style={styles.smartValue}>{bestRouteScore?.station.name}</Text>
-        <Text style={styles.smartMeta}>Net savings P{Math.max(0, bestRouteScore?.pesosSaved ?? 0).toFixed(0)} after estimated travel cost</Text>
+        <View style={styles.smartPanel}>
+          <Text style={styles.smartLabel}>Smart diesel route</Text>
+          <Text style={styles.smartValue}>{bestRouteScore?.station.name}</Text>
+          <Text style={styles.smartMeta}>Net savings P{Math.max(0, bestRouteScore?.pesosSaved ?? 0).toFixed(0)} after estimated travel cost</Text>
+        </View>
       </View>
 
       {error ? (
@@ -119,13 +128,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  headerPanel: {
+  topStack: {
     position: 'absolute',
     top: 52,
     left: 16,
     right: 16,
+    boxShadow: '0 8px 22px rgba(194, 65, 12, 0.16)',
+  },
+  headerPanel: {
     minHeight: 76,
-    borderRadius: 8,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderWidth: 1,
     borderColor: colors.border,
@@ -133,14 +146,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    boxShadow: '0 8px 22px rgba(194, 65, 12, 0.16)',
   },
-  eyebrow: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '900',
-    textTransform: 'uppercase',
+  logoBox: {
+    alignSelf: 'flex-start',
+    minWidth: 134,
+    minHeight: 42,
+    borderRadius: 8,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: 'rgba(249, 115, 22, 0.24)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    boxShadow: '0 6px 14px rgba(194, 65, 12, 0.14)',
   },
+  headerLogo: { width: 112, height: 27 },
   title: {
     color: colors.text,
     fontSize: 20,
@@ -162,13 +182,11 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   smartPanel: {
-    position: 'absolute',
-    top: 140,
-    left: 16,
-    right: 16,
-    borderRadius: 8,
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.96)',
     borderWidth: 1,
+    borderTopWidth: 0,
     borderColor: colors.border,
     paddingHorizontal: 12,
     paddingVertical: 10,
