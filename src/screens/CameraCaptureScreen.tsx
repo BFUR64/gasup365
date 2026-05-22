@@ -23,8 +23,55 @@ const emptyParsedText: ParsedGasStationText = {
   rawText: '',
 };
 
+const cloudinaryCloudName = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dzisx3ntp';
+const cloudinaryUploadPreset = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'pictures';
+const placeholderImageUrl = 'https://placehold.co/640x480/F97316/FFFFFF?text=GasUp365';
 const parserName = 'expo-text-recognition + gas-station-keyword-nlp';
 const isWeb = Platform.OS === 'web';
+
+type CapturedGasStationScan = {
+  parsed: ParsedGasStationText;
+  imageUri: string;
+  location: Coordinates | null;
+};
+
+type CloudinaryUploadResponse = {
+  secure_url?: string;
+  public_id?: string;
+};
+
+const uploadImageToCloudinary = async (localUri: string): Promise<CloudinaryUploadResponse> => {
+  if (!cloudinaryCloudName || !cloudinaryUploadPreset) {
+    throw new Error('Cloudinary is missing EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME or EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET.');
+  }
+
+  const formData = new FormData();
+  const uploadFile = {
+    uri: localUri,
+    type: 'image/jpeg',
+    name: `gasup365-${Date.now()}.jpg`,
+  };
+
+  formData.append('file', uploadFile as unknown as Blob);
+  formData.append('upload_preset', cloudinaryUploadPreset);
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudinaryCloudName}/image/upload`,
+    { method: 'POST', body: formData },
+  );
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(parseCloudinaryError(responseText));
+  }
+
+  const uploadResult = JSON.parse(responseText) as CloudinaryUploadResponse;
+  if (!uploadResult.secure_url) {
+    throw new Error('Cloudinary upload succeeded but did not return a secure image URL.');
+  }
+
+  return uploadResult;
+};
 
 export const CameraCaptureScreen: React.FC = () => {
   const router = useRouter();
@@ -45,7 +92,7 @@ export const CameraCaptureScreen: React.FC = () => {
   const missingFields = useMemo(() => getMissingGasStationFields(parsedText), [parsedText]);
   const extractionSummary = useMemo(() => buildExtractionSummary(parsedText, missingFields), [missingFields, parsedText]);
 
-  const captureAndParse = async () => {
+  const captureAndParse = async (): Promise<CapturedGasStationScan | null> => {
     if (isScanning) return null;
 
     if (isWeb) {
@@ -77,7 +124,7 @@ export const CameraCaptureScreen: React.FC = () => {
       );
 
       applyParsedCapture(parsed, photo.uri, fallbackLocation);
-      return parsed;
+      return { parsed, imageUri: photo.uri, location: parsed.location || fallbackLocation };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'The OCR scan failed. You can still enter the values manually.';
       Alert.alert('Unable to scan text', message);
@@ -94,12 +141,18 @@ export const CameraCaptureScreen: React.FC = () => {
 
     try {
       let parsedForSave = parsedText;
+      let imageUriForSave = capturedImageUri;
+      let locationForSave = capturedLocation;
       if (!parsedForSave.rawText && !hasAnyManualPrice()) {
-        const parsed = await captureAndParse();
-        if (parsed) parsedForSave = parsed;
+        const capture = await captureAndParse();
+        if (capture) {
+          parsedForSave = capture.parsed;
+          imageUriForSave = capture.imageUri;
+          locationForSave = capture.location;
+        }
       }
 
-      const markerLocation = capturedLocation || parsedForSave.location || (await getDeviceLocation());
+      const markerLocation = locationForSave || parsedForSave.location || (await getDeviceLocation());
       if (!markerLocation) {
         Alert.alert('Location needed', 'Allow location access so GasUp365 can place this marker on the map.');
         return;
@@ -124,13 +177,16 @@ export const CameraCaptureScreen: React.FC = () => {
         fuelPrices.unleaded ? `Unleaded P${fuelPrices.unleaded.toFixed(2)}` : '',
         fuelPrices.premium ? `Premium P${fuelPrices.premium.toFixed(2)}` : '',
       ].filter(Boolean);
+      const cloudinaryImage = imageUriForSave ? await uploadImageToCloudinary(imageUriForSave) : null;
 
       await addDoc(collection(db, 'markers'), {
         latitude: markerLocation.latitude,
         longitude: markerLocation.longitude,
         title,
         description: descriptionParts.join(' | '),
-        imageUrl: capturedImageUri || 'https://placehold.co/640x480/F97316/FFFFFF?text=GasUp365',
+        imageUrl: cloudinaryImage?.secure_url || placeholderImageUrl,
+        imageStorage: cloudinaryImage ? 'cloudinary' : 'placeholder',
+        cloudinaryPublicId: cloudinaryImage?.public_id || null,
         prices: fuelPrices,
         source: 'camera-ocr',
         ocr: {
@@ -365,6 +421,17 @@ const getDeviceLocation = async (): Promise<Coordinates | null> => {
 const toPriceOrNull = (value: string) => {
   const price = Number(value.replace(/,/g, '').trim());
   return Number.isFinite(price) && price > 0 ? price : null;
+};
+
+const parseCloudinaryError = (responseText: string) => {
+  if (!responseText.trim()) return 'Cloudinary upload failed with an empty response.';
+
+  try {
+    const payload = JSON.parse(responseText) as { error?: { message?: string } };
+    return payload.error?.message ? `Cloudinary upload failed: ${payload.error.message}` : 'Cloudinary upload failed.';
+  } catch {
+    return `Cloudinary upload failed: ${responseText}`;
+  }
 };
 
 const buildExtractionSummary = (
