@@ -8,7 +8,7 @@ export const kaliboCenter = {
 export const stations: Station[] = [
     {
         id: 1,
-        name: "Petron - Kalibo",
+        name: "Petron – Kalibo",
         address: "Roxas Avenue, Kalibo, Aklan",
         distance: 0.7,
         lastUpdated: "Live now",
@@ -20,7 +20,7 @@ export const stations: Station[] = [
     },
     {
         id: 2,
-        name: "Shell - Kalibo Crossing",
+        name: "Shell – Kalibo Crossing",
         address: "Kalibo Crossing, Kalibo, Aklan",
         distance: 1.1,
         lastUpdated: "3 min ago",
@@ -32,7 +32,7 @@ export const stations: Station[] = [
     },
     {
         id: 3,
-        name: "Caltex - Andagao",
+        name: "Caltex – Andagao",
         address: "Andagao, Kalibo, Aklan",
         distance: 1.8,
         lastUpdated: "6 min ago",
@@ -44,7 +44,7 @@ export const stations: Station[] = [
     },
     {
         id: 4,
-        name: "Phoenix - Estancia",
+        name: "Phoenix – Estancia",
         address: "Estancia, Kalibo, Aklan",
         distance: 2.4,
         lastUpdated: "9 min ago",

@@ -1,9 +1,9 @@
 # Current handoff
 
 Created: 2026-10-21T10:55:54+08:00
-Updated: 2026-10-22T08:18:26+08:00
-State: Awaiting approval
-Feature: Baseline Setup (`PROD-OVERVIEW`, `PROD-ARCH`, `PROD-DATA`, `PROD-CONSTRAINTS`)
+Updated: 2026-10-22T09:40:00+08:00
+State: UI redesign implemented on `feat/ui-redesign`, awaiting Len's review
+Feature: UI redesign "Pixel Pump Town" (DESIGN-002 canvas); Baseline Setup docs still awaiting approval
 
 ## Read first
 
@@ -17,6 +17,8 @@ Feature: Baseline Setup (`PROD-OVERVIEW`, `PROD-ARCH`, `PROD-DATA`, `PROD-CONSTR
    - [docs/product/DATA_MODEL.md](docs/product/DATA_MODEL.md)
    - [docs/product/CONSTRAINTS.md](docs/product/CONSTRAINTS.md)
 6. [docs/design/CLAUDE_DESIGN_HANDOFF.md](docs/design/CLAUDE_DESIGN_HANDOFF.md): the Claude Design handoff (DESIGN-002). It covers the full function inventory, the UI/UX evaluation, the "World + HUD" layout decision, design conventions and screen specs. It replaces `docs/design/CLAUDE_DESIGN_SPEC.md` (DESIGN-001). Draft, awaiting approval.
+
+7. [docs/evidence/UI-REDESIGN-verification.md](docs/evidence/UI-REDESIGN-verification.md): what the UI redesign built, where it differs from the canvas, checks, and open issues.
 
 Reread these files and inspect actual Git status before acting; prior chat memory is not authoritative.
 
@@ -32,6 +34,8 @@ Reread these files and inspect actual Git status before acting; prior chat memor
 | [docs/design/CLAUDE_DESIGN_SPEC.md](docs/design/CLAUDE_DESIGN_SPEC.md) | Revision 1 (Superseded by DESIGN-002) | Requested by Len ("come up with a detailed spec file for claude design") |
 | [docs/design/CLAUDE_DESIGN_HANDOFF.md](docs/design/CLAUDE_DESIGN_HANDOFF.md) | Revision 1 (Draft) | Requested by Len ("Create a detailed handoff md that i can drop off to claude design"). On 2026-10-22 Len gave Revision 1 to Claude Design as-is ("claude design is currently generating i already dropped it there"). The 9 open questions in its section 13 are still unanswered. |
 
+| Claude Design canvas "GasUp365 · Pixel Pump Town" (https://claude.ai/artifact/FjhkR3fFkF2zsvGkVSYLji) | Version 1792629665-66fc | 2026-10-22: Len asked "Can you implement this full ui redesign here: <canvas link>". Implemented; see [docs/evidence/UI-REDESIGN-verification.md](docs/evidence/UI-REDESIGN-verification.md). |
+
 Approved outside the feature loop: Len asked in chat for the `@expo/vector-icons` dependency fix ("Go fix the dependency issue now"). Done; see Checks.
 
 Allowed phases: None until approval is recorded.
@@ -44,6 +48,7 @@ Architecture and behavior changes return to Len; this handoff cannot override th
   - Claude ran a UI/UX evaluation and a council review of the layout. The results are in DESIGN-002 sections 2 and 4.
   - Claude wrote [docs/design/CLAUDE_DESIGN_HANDOFF.md](docs/design/CLAUDE_DESIGN_HANDOFF.md) (DESIGN-002). Len gave it to Claude Design, which is generating designs now.
   - Finding: with the current sample data, Smart Route's best Diesel and Unleaded picks have a negative net saving after travel (DESIGN-002 §11.1). This is open question 9.
+- **UI redesign (2026-10-22)**: implemented every canvas artboard on branch `feat/ui-redesign` (pixel theme tokens, custom pixel icons and sprites, Hotbar tab bar and wide rail, Auth/Boot title scene, World + HUD map with escaped pixel pins and tap-to-expand sheet, leaderboard Stations, Snap → Review → Share scan flow with in-app dialogs and toasts, reward popup, Me character sheet, 1440 px two-pane). Added the three Google font packages. Stats, XP, rank-ups and badges stay unwired (FEAT-003); community prices show on the map but are not scored or listed (FEAT-001). Details and deviations: [docs/evidence/UI-REDESIGN-verification.md](docs/evidence/UI-REDESIGN-verification.md).
 - **Completed**:
   - Full reconnaissance of backend (Firebase Auth, Firestore `markers` & `users`, Cloudinary) and frontend (Expo Router tabs, screens, OCR/NLP services, route scoring).
   - Saved findings to [docs/RECON_REPORT.md](docs/RECON_REPORT.md).
@@ -68,6 +73,7 @@ Reconcile this record with Git before resuming, especially after an interrupted 
 | Typecheck | `npx tsc --noEmit` | Git Bash | Pass (0 errors) | Before the fix: 9 `TS2307: Cannot find module '@expo/vector-icons'` errors. |
 | Android bundle | `npx expo export --platform android` | Git Bash | Pass | Passed both before and after the fix. Metro could already resolve the nested copy. |
 | Web static export | `npx expo export --platform web` | Git Bash | Pass | All 7 static routes rendered, before and after the fix. |
+| UI redesign gates | `npm test`, `npm run lint`, `npx tsc --noEmit`, web and Android exports | Git Bash, 2026-10-22 | Pass (6 suites, 27 tests; 0 lint problems; 0 type errors) | Plus headless Edge screenshots of the web export. Not run on a physical device. |
 
 ## Blockers and attempts
 
@@ -79,6 +85,8 @@ Reconcile this record with Git before resuming, especially after an interrupted 
 Do not reset a count on a new session or silently reinterpret a failed check as passing.
 
 ## Next action
+
+- UI redesign: Len to review on a phone (camera, OCR, WebView map, safe areas) and decide on the Pixelify Sans price digits (verification log, open issue 1). Then merge `feat/ui-redesign`.
 
 0. Len to decide whether to fix the unescaped marker popup HTML in the mobile WebView (`src/components/LiveMap.tsx:148`) and add Firestore rules before FEAT-001 (see [docs/RECON_REPORT.md](docs/RECON_REPORT.md) §6.3).
 1. Obtain Len's review and approval of the baseline product docs (`docs/product/*`) and select the first feature to spec in detail (recommended: **FEAT-001: Unified Live Station Data & Smart Routing Pipeline**).

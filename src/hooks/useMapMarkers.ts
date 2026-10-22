@@ -10,6 +10,13 @@ export interface MapMarker {
   title: string;
   description?: string;
   imageUrl?: string;
+  prices?: MarkerPrices;
+}
+
+export interface MarkerPrices {
+  diesel?: number | null;
+  unleaded?: number | null;
+  premium?: number | null;
 }
 
 interface MarkerDocument {
@@ -18,6 +25,7 @@ interface MarkerDocument {
   title?: string;
   description?: string;
   imageUrl?: string;
+  prices?: MarkerPrices;
 }
 
 export const useMapMarkers = () => {
@@ -44,9 +52,10 @@ export const useMapMarkers = () => {
             id: document.id,
             lat: data.latitude,
             lng: data.longitude,
-            title: data.title || 'GasUp365 marker',
+            title: data.title || 'Community station',
             description: data.description,
             imageUrl: data.imageUrl,
+            prices: data.prices,
           });
         });
 

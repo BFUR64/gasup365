@@ -71,7 +71,9 @@ export const scoreStationsForRoute = (
         });
 };
 
-export const buildGoogleMapsDirectionsUrl = (station: Station) => {
-    const destination = `${station.coordinates.latitude},${station.coordinates.longitude}`;
+export const buildDirectionsUrl = (coordinates: Station['coordinates']) => {
+    const destination = `${coordinates.latitude},${coordinates.longitude}`;
     return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}&travelmode=driving`;
 };
+
+export const buildGoogleMapsDirectionsUrl = (station: Station) => buildDirectionsUrl(station.coordinates);

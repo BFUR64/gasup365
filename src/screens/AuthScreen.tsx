@@ -1,39 +1,42 @@
-import { Feather } from '@expo/vector-icons';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import React, { useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Image,
-  KeyboardAvoidingView,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import React, { useState } from 'react';
+import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { PixelScene } from '../components/PixelScene';
+import { PixelButton } from '../components/ui/PixelButton';
+import { PixelIcon } from '../components/ui/PixelIcon';
+import { PixelInput } from '../components/ui/PixelInput';
 import { auth, db } from '../firebaseservices/firebase';
-import { colors } from '../theme/colors';
+import { colors, palette } from '../theme/colors';
+import { pixel } from '../theme/pixel';
+import { shadow, type } from '../theme/tokens';
 
 type AuthMode = 'login' | 'signup';
 
+const EMAIL_PATTERN = /.+@.+\..+/;
+
+// "Game title screen" log in / sign up (DESIGN-002 §7.2).
 export const AuthScreen: React.FC = () => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isSignup = mode === 'signup';
-  const title = isSignup ? 'Create your account' : 'Welcome back';
-  const subtitle = isSignup ? 'Track fuel prices in one place.' : 'Sign in to continue.';
-
-  const canSubmit = useMemo(() => {
-    const hasBaseFields = email.trim().length > 0 && password.length >= 6;
-    return isSignup ? hasBaseFields && name.trim().length > 0 : hasBaseFields;
-  }, [email, isSignup, name, password]);
+  const nameOk = !isSignup || name.trim().length > 0;
+  const emailOk = EMAIL_PATTERN.test(email.trim());
+  const passwordOk = password.length >= 6;
+  const canSubmit = nameOk && emailOk && passwordOk;
+  const blocker = !nameOk
+    ? 'Add your name to continue.'
+    : !emailOk
+      ? 'Add your email to continue.'
+      : !passwordOk
+        ? 'Password needs at least 6 characters.'
+        : '';
 
   const handleSubmit = async () => {
     if (!canSubmit || isSubmitting) return;
@@ -65,122 +68,121 @@ export const AuthScreen: React.FC = () => {
     }
   };
 
-  const switchMode = () => {
-    setMode(isSignup ? 'login' : 'signup');
+  const switchMode = (nextMode: AuthMode) => {
+    setMode(nextMode);
     setError('');
   };
 
   return (
-    <KeyboardAvoidingView style={styles.keyboardView} behavior="padding">
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={styles.content}
-      >
-        <View style={styles.authCard}>
-          <View style={styles.brandBlock}>
-            <Image
-              source={require('../../assets/images/Gasup.png')}
-              style={styles.brandLogo}
-              resizeMode="contain"
-              accessibilityLabel="GasUp"
-            />
-            <Text style={styles.brandText}>Find better fuel stops, faster.</Text>
+    <View style={styles.screen}>
+      <PixelScene />
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[styles.content, { paddingTop: isSignup ? 60 : 96 }]}>
+          <View style={styles.brand}>
+            <Image source={require('../../assets/images/Gasup.png')} style={styles.logo} accessibilityLabel="GasUp365" />
+            <Text style={[type.displaySm, styles.tagline]}>Find better fuel stops, faster.</Text>
           </View>
 
-          <View style={styles.formCard}>
-            <View style={styles.formHeader}>
-              <Text style={styles.title}>{title}</Text>
-              <Text style={styles.subtitle}>{subtitle}</Text>
+          <View style={[pixel.panel, styles.panel, { marginTop: isSignup ? 123 : 159 }]}>
+            <View accessibilityRole="tablist" style={styles.tabs}>
+              {(['login', 'signup'] as AuthMode[]).map((tab, index) => {
+                const on = tab === mode;
+                return (
+                  <Pressable
+                    key={tab}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: on }}
+                    onPress={() => switchMode(tab)}
+                    style={[styles.tab, index > 0 && styles.tabDivider, on && styles.tabOn]}
+                  >
+                    <Text style={[type.displaySm, { color: on ? colors.onAction : colors.textMuted }]}>
+                      {tab === 'login' ? 'Log in' : 'Sign up'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
 
-            <View style={styles.segmentedControl}>
-              <Pressable
-                style={[styles.segmentButton, !isSignup && styles.segmentButtonActive]}
-                onPress={() => setMode('login')}
-              >
-                <Text style={[styles.segmentText, !isSignup && styles.segmentTextActive]}>Login</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.segmentButton, isSignup && styles.segmentButtonActive]}
-                onPress={() => setMode('signup')}
-              >
-                <Text style={[styles.segmentText, isSignup && styles.segmentTextActive]}>Sign up</Text>
-              </Pressable>
+            <View>
+              <Text accessibilityRole="header" style={[type.displayLg, { color: colors.text }]}>
+                {isSignup ? 'Create your account' : 'Welcome back'}
+              </Text>
+              <Text style={[type.bodyMd, { color: colors.textMuted }]}>
+                {isSignup ? 'Track fuel prices in one place.' : 'Sign in to continue.'}
+              </Text>
             </View>
 
-            <View style={styles.fields}>
-              {isSignup && (
-                <View style={styles.inputWrap}>
-                  <Feather name="user" size={18} color={colors.muted} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Full name"
-                    placeholderTextColor={colors.muted}
-                    autoCapitalize="words"
-                    value={name}
-                    onChangeText={setName}
-                  />
-                </View>
-              )}
+            {isSignup ? (
+              <Field label="Full name">
+                <PixelInput placeholder="Aira Santos" autoCapitalize="words" autoComplete="name" value={name} onChangeText={setName} />
+              </Field>
+            ) : null}
 
-              <View style={styles.inputWrap}>
-                <Feather name="mail" size={18} color={colors.muted} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Email address"
-                  placeholderTextColor={colors.muted}
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  keyboardType="email-address"
-                  value={email}
-                  onChangeText={setEmail}
-                />
-              </View>
+            <Field label="Email">
+              <PixelInput
+                placeholder="you@email.com"
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+              />
+            </Field>
 
-              <View style={styles.inputWrap}>
-                <Feather name="lock" size={18} color={colors.muted} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Password"
-                  placeholderTextColor={colors.muted}
+            <Field label="Password" helper="At least 6 characters">
+              <View>
+                <PixelInput
+                  placeholder="Your password"
                   autoCapitalize="none"
                   autoComplete={isSignup ? 'new-password' : 'current-password'}
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
+                  onSubmitEditing={handleSubmit}
+                  inputStyle={styles.passwordInput}
                 />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                  onPress={() => setShowPassword(!showPassword)}
+                  style={styles.eye}
+                >
+                  <PixelIcon name="eye" size={24} />
+                </Pressable>
               </View>
+            </Field>
+
+            <View style={styles.submit}>
+              <PixelButton
+                label={isSignup ? 'Create account' : 'Log in'}
+                icon="navigate"
+                disabled={!canSubmit}
+                loading={isSubmitting}
+                onPress={handleSubmit}
+              />
+              {blocker ? <Text style={[type.caption, styles.helper]}>{blocker}</Text> : null}
             </View>
 
-            {error ? <Text style={styles.errorText} selectable>{error}</Text> : null}
-
-            <Pressable
-              style={[styles.submitButton, (!canSubmit || isSubmitting) && styles.submitButtonDisabled]}
-              onPress={handleSubmit}
-              disabled={!canSubmit || isSubmitting}
-            >
-              {isSubmitting ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <>
-                  <Text style={styles.submitText}>{isSignup ? 'Create account' : 'Login'}</Text>
-                  <Feather name="arrow-right" size={18} color="white" />
-                </>
-              )}
-            </Pressable>
-
-            <Pressable style={styles.switchButton} onPress={switchMode}>
-              <Text style={styles.switchText}>
-                {isSignup ? 'Already have an account? Login' : 'New here? Sign up'}
-              </Text>
-            </Pressable>
+            {error ? (
+              <View accessibilityRole="alert" style={styles.error}>
+                <PixelIcon name="warning" size={20} color={colors.danger} />
+                <Text style={[type.bodyStrong, styles.errorText]}>{error}</Text>
+              </View>
+            ) : null}
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 };
+
+const Field: React.FC<{ label: string; helper?: string; children: React.ReactNode }> = ({ label, helper, children }) => (
+  <View style={styles.field}>
+    <Text style={[type.tag, { color: colors.text }]}>{label}</Text>
+    {children}
+    {helper ? <Text style={[type.caption, { color: colors.textMuted }]}>{helper}</Text> : null}
+  </View>
+);
 
 const getAuthMessage = (error: unknown) => {
   const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : '';
@@ -189,93 +191,36 @@ const getAuthMessage = (error: unknown) => {
   if (code.includes('invalid-email')) return 'Enter a valid email address.';
   if (code.includes('invalid-credential') || code.includes('wrong-password')) return 'Email or password is incorrect.';
   if (code.includes('weak-password')) return 'Use at least 6 characters for your password.';
+  if (code.includes('network-request-failed')) return 'No connection. Check your internet and try again.';
   return 'Unable to continue. Please try again.';
 };
 
 const styles = StyleSheet.create({
-  keyboardView: { flex: 1, backgroundColor: colors.primarySoft },
-  content: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 40,
-  },
-  authCard: {
-    width: '100%',
-    maxWidth: 420,
-    alignSelf: 'center',
-    borderRadius: 8,
-    boxShadow: '0 8px 24px rgba(31, 41, 51, 0.08)',
-  },
-  brandBlock: {
-    width: '100%',
+  screen: { flex: 1, backgroundColor: palette.grass400 },
+  flex: { flex: 1 },
+  content: { flexGrow: 1, paddingHorizontal: 16, paddingBottom: 32, alignItems: 'center' },
+  brand: { alignItems: 'center', gap: 10 },
+  logo: { width: 312, height: 75 },
+  tagline: { color: colors.surfaceTint, backgroundColor: colors.outline, paddingHorizontal: 10, paddingVertical: 4 },
+  panel: { width: '100%', maxWidth: 420, padding: 16, gap: 14 },
+  tabs: { flexDirection: 'row', borderWidth: 2, borderColor: colors.outline, backgroundColor: colors.surfaceSunken },
+  tab: { flex: 1, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  tabDivider: { borderLeftWidth: 2, borderLeftColor: colors.outline },
+  tabOn: { backgroundColor: colors.action, boxShadow: shadow.primaryFlat },
+  field: { gap: 4 },
+  passwordInput: { paddingRight: 56 },
+  eye: { position: 'absolute', right: 2, top: 2, width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
+  submit: { gap: 6 },
+  helper: { color: colors.textMuted, textAlign: 'center' },
+  error: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: colors.card,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    borderColor: colors.border,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 2,
+    borderColor: colors.danger,
+    backgroundColor: palette.white,
   },
-  brandLogo: { width: 240, height: 58 },
-  brandText: { fontSize: 14, color: colors.muted, textAlign: 'center' },
-  formCard: {
-    width: '100%',
-    backgroundColor: colors.card,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    borderBottomLeftRadius: 8,
-    borderBottomRightRadius: 8,
-    borderWidth: 1,
-    borderTopWidth: 0,
-    borderColor: colors.border,
-    padding: 18,
-    gap: 16,
-  },
-  formHeader: { gap: 6 },
-  title: { fontSize: 24, fontWeight: '800', color: colors.text, textAlign: 'center' },
-  subtitle: { fontSize: 14, color: colors.muted, textAlign: 'center' },
-  segmentedControl: {
-    flexDirection: 'row',
-    backgroundColor: colors.accent,
-    borderRadius: 8,
-    padding: 4,
-    gap: 4,
-  },
-  segmentButton: { flex: 1, minHeight: 40, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
-  segmentButtonActive: { backgroundColor: colors.primary },
-  segmentText: { fontSize: 14, fontWeight: '700', color: colors.muted },
-  segmentTextActive: { color: 'white' },
-  fields: { gap: 12 },
-  inputWrap: {
-    minHeight: 50,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    backgroundColor: colors.background,
-    paddingHorizontal: 14,
-  },
-  input: { flex: 1, color: colors.text, fontSize: 15 },
-  errorText: { color: colors.destructive, fontSize: 13, textAlign: 'center' },
-  submitButton: {
-    minHeight: 50,
-    borderRadius: 8,
-    backgroundColor: colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  submitButtonDisabled: { opacity: 0.55 },
-  submitText: { color: 'white', fontSize: 16, fontWeight: '800' },
-  switchButton: { alignItems: 'center', paddingVertical: 4 },
-  switchText: { color: colors.primaryDark, fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  errorText: { flex: 1, color: colors.danger },
 });

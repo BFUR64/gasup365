@@ -1,7 +1,7 @@
 # Specification index
 
 Created: 2026-10-21T10:55:54+08:00
-Updated: 2026-10-22T08:18:26+08:00
+Updated: 2026-10-22T09:40:00+08:00
 
 | Category | ID | Current path | Revision | Status | Replaces |
 | --- | --- | --- | --- | --- | --- |
@@ -13,6 +13,7 @@ Updated: 2026-10-22T08:18:26+08:00
 | Product | PROD-CONSTRAINTS | [product/CONSTRAINTS.md](product/CONSTRAINTS.md) | 2 | Draft | Revision 1 |
 | Design | DESIGN-001 | [design/CLAUDE_DESIGN_SPEC.md](design/CLAUDE_DESIGN_SPEC.md) | 1 | Superseded by DESIGN-002 | None |
 | Design | DESIGN-002 | [design/CLAUDE_DESIGN_HANDOFF.md](design/CLAUDE_DESIGN_HANDOFF.md) | 1 | Draft | DESIGN-001 Revision 1 |
+| Evidence | UI-REDESIGN | [evidence/UI-REDESIGN-verification.md](evidence/UI-REDESIGN-verification.md) | 1 | Implemented, awaiting Len's review | None |
 
 ## Document-Driven Development Lifecycle
 
