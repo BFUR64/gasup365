@@ -1,7 +1,7 @@
 # Current handoff
 
 Created: 2026-10-21T10:55:54+08:00
-Updated: 2026-10-21T15:30:16+08:00
+Updated: 2026-10-22T08:18:26+08:00
 State: Awaiting approval
 Feature: Baseline Setup (`PROD-OVERVIEW`, `PROD-ARCH`, `PROD-DATA`, `PROD-CONSTRAINTS`)
 
@@ -16,6 +16,7 @@ Feature: Baseline Setup (`PROD-OVERVIEW`, `PROD-ARCH`, `PROD-DATA`, `PROD-CONSTR
    - [docs/product/ARCHITECTURE.md](docs/product/ARCHITECTURE.md)
    - [docs/product/DATA_MODEL.md](docs/product/DATA_MODEL.md)
    - [docs/product/CONSTRAINTS.md](docs/product/CONSTRAINTS.md)
+6. [docs/design/CLAUDE_DESIGN_HANDOFF.md](docs/design/CLAUDE_DESIGN_HANDOFF.md): the Claude Design handoff (DESIGN-002). It covers the full function inventory, the UI/UX evaluation, the "World + HUD" layout decision, design conventions and screen specs. It replaces `docs/design/CLAUDE_DESIGN_SPEC.md` (DESIGN-001). Draft, awaiting approval.
 
 Reread these files and inspect actual Git status before acting; prior chat memory is not authoritative.
 
@@ -28,6 +29,8 @@ Reread these files and inspect actual Git status before acting; prior chat memor
 | [docs/product/ARCHITECTURE.md](docs/product/ARCHITECTURE.md) | Revision 1 (Draft) | Pending |
 | [docs/product/DATA_MODEL.md](docs/product/DATA_MODEL.md) | Revision 1 (Draft) | Pending |
 | [docs/product/CONSTRAINTS.md](docs/product/CONSTRAINTS.md) | Revision 2 (Draft) | Pending |
+| [docs/design/CLAUDE_DESIGN_SPEC.md](docs/design/CLAUDE_DESIGN_SPEC.md) | Revision 1 (Superseded by DESIGN-002) | Requested by Len ("come up with a detailed spec file for claude design") |
+| [docs/design/CLAUDE_DESIGN_HANDOFF.md](docs/design/CLAUDE_DESIGN_HANDOFF.md) | Revision 1 (Draft) | Requested by Len ("Create a detailed handoff md that i can drop off to claude design"). On 2026-10-22 Len gave Revision 1 to Claude Design as-is ("claude design is currently generating i already dropped it there"). The 9 open questions in its section 13 are still unanswered. |
 
 Approved outside the feature loop: Len asked in chat for the `@expo/vector-icons` dependency fix ("Go fix the dependency issue now"). Done; see Checks.
 
@@ -36,7 +39,11 @@ Architecture and behavior changes return to Len; this handoff cannot override th
 
 ## Progress and working tree
 
-- **Branch**: `main` at `c0207da` (`Update README.md`).
+- **Branch**: `baseline/dd-workflow`. It is ahead of `main` (`c0207da`) by the baseline commits and the DESIGN-002 commit, and has not been merged into `main` yet.
+- **Design (2026-10-22)**:
+  - Claude ran a UI/UX evaluation and a council review of the layout. The results are in DESIGN-002 sections 2 and 4.
+  - Claude wrote [docs/design/CLAUDE_DESIGN_HANDOFF.md](docs/design/CLAUDE_DESIGN_HANDOFF.md) (DESIGN-002). Len gave it to Claude Design, which is generating designs now.
+  - Finding: with the current sample data, Smart Route's best Diesel and Unleaded picks have a negative net saving after travel (DESIGN-002 §11.1). This is open question 9.
 - **Completed**:
   - Full reconnaissance of backend (Firebase Auth, Firestore `markers` & `users`, Cloudinary) and frontend (Expo Router tabs, screens, OCR/NLP services, route scoring).
   - Saved findings to [docs/RECON_REPORT.md](docs/RECON_REPORT.md).
@@ -75,4 +82,5 @@ Do not reset a count on a new session or silently reinterpret a failed check as 
 
 0. Len to decide whether to fix the unescaped marker popup HTML in the mobile WebView (`src/components/LiveMap.tsx:148`) and add Firestore rules before FEAT-001 (see [docs/RECON_REPORT.md](docs/RECON_REPORT.md) §6.3).
 1. Obtain Len's review and approval of the baseline product docs (`docs/product/*`) and select the first feature to spec in detail (recommended: **FEAT-001: Unified Live Station Data & Smart Routing Pipeline**).
-2. Draft `docs/features/FEAT-001-live-station-pipeline.md` (Stage 1: Spec) and `docs/plans/FEAT-001-implementation.md` (Stage 2: Design/Plan) for Len's approval before Stage 3 (Create Test), Stage 4 (Generate Code), and Stage 5 (Optimize/Bugfix).
+2. When Claude Design returns its output, review it against the DESIGN-002 §12 checklist. Ask Len to answer the §13 open questions, then fold the answers into DESIGN-002 Revision 2.
+3. Draft `docs/features/FEAT-001-live-station-pipeline.md` (Stage 1: Spec) and `docs/plans/FEAT-001-implementation.md` (Stage 2: Design/Plan) for Len's approval before Stage 3 (Create Test), Stage 4 (Generate Code), and Stage 5 (Optimize/Bugfix).
