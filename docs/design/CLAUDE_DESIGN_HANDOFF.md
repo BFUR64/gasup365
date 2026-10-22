@@ -1,9 +1,9 @@
 # GasUp365: Claude Design Handoff
 
 Created: 2026-10-22T08:18:26+08:00
-Updated: 2026-10-22T08:18:26+08:00
+Updated: 2026-10-22T20:01:25+08:00
 Revision: 1
-Status: Draft (awaiting Len's approval)
+Status: Draft (awaiting Len's approval). Delivered to Claude Design and implemented on `feat/ui-redesign`.
 ID: DESIGN-002
 Replaces: DESIGN-001 ([CLAUDE_DESIGN_SPEC.md](CLAUDE_DESIGN_SPEC.md), Revision 1). This handoff includes everything in that spec, plus the 2026-10-22 UI/UX evaluation and the layout decision.
 
@@ -15,6 +15,8 @@ Replaces: DESIGN-001 ([CLAUDE_DESIGN_SPEC.md](CLAUDE_DESIGN_SPEC.md), Revision 1
 > - the **layout style** to use (section 4)
 >
 > The visual direction is **a modern pixel-art game look inspired by sandbox pixel games such as Growtopia and Terraria**. Those games are mood references only. All art must be original.
+
+> **Status note (2026-10-22, not a content revision).** Claude Design produced the canvas "GasUp365 · Pixel Pump Town" from this document, and it is implemented on `feat/ui-redesign` (`e333f07`, `94497ea`). Differences from the canvas are in [../evidence/UI-REDESIGN-verification.md](../evidence/UI-REDESIGN-verification.md). The §13 questions are still unanswered. The build used the proposed defaults for Q1 (a Rewards slot marked SOON that opens Me), Q2 ("coins" in the UI, `points` in data), Q7 (Day theme only) and Q8 (Map as the default tab). Q3–Q6 and Q9 are open, and the sample prices are unchanged. Len has since decided one thing this document does not say: prices use Nunito, not Pixelify Sans.
 
 ---
 

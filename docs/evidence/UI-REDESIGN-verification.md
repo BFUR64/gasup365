@@ -1,9 +1,10 @@
 # UI redesign ("Pixel Pump Town") verification
 
 Created: 2026-10-22
+Updated: 2026-10-22T20:01:25+08:00
 Source design: Claude Design canvas "GasUp365 · Pixel Pump Town" (https://claude.ai/artifact/FjhkR3fFkF2zsvGkVSYLji), built from DESIGN-002.
 Approval: Len asked in chat on 2026-10-22: "Can you implement this full ui redesign here: <canvas link>".
-Branch: `feat/ui-redesign`
+Branch: `feat/ui-redesign` (`e333f07` redesign, `94497ea` prices in Nunito). Merged into local `main` on 2026-10-22 at Len's request.
 
 ## What was built
 
@@ -36,6 +37,7 @@ Fonts: `@expo-google-fonts/pixelify-sans`, `@expo-google-fonts/silkscreen` and `
 
 ## Security
 
+- Pin titles (which include the Firestore station name) go to Leaflet's `title` option, which sets a DOM attribute, not HTML.
 - Map popups are gone. Pins are Leaflet `divIcon` markup built in `pinHtml.ts`; the only data value in it (the price label) is HTML-escaped (`pinHtml.test.ts`). This closes the unescaped popup issue in RECON_REPORT §6.3 for the mobile WebView.
 
 ## Checks (2026-10-22, Git Bash, Node 24.14.0)
@@ -49,9 +51,14 @@ Fonts: `@expo-google-fonts/pixelify-sans`, `@expo-google-fonts/silkscreen` and `
 | Android bundle | `npx expo export --platform android` | Pass |
 | Visual check | Headless Edge screenshots of the web export at 390 × 844 and 1440 × 900 (Auth, Sign up, Map, sheet peek and expanded, Stations, row expanded, Scan web state, Review, Me, sign-out dialog, two-pane) | Rendered as designed. Screens behind sign-in were checked with a temporary build that skipped auth; that change was reverted and is not committed. |
 
-Not checked: a physical Android or iOS device (camera, OCR, WebView map, safe areas, `boxShadow` rendering).
+Physical device: Len tested the app on a phone on 2026-10-22 and reported "it works fine". The device model, OS and the individual checks (camera, OCR, WebView map, safe areas, `boxShadow`) were not recorded.
 
 ## Open issues for Len
 
 1. **Pixelify Sans digits, resolved for prices** (switched to Nunito, see above). Rank numbers in the Stations list and the Scan stepper numbers still use Pixelify, so a "2" there can look like an "8"; switch those too if it bothers you.
 2. The static web export logs React hydration error #418, because the server renders the Boot screen and the client renders the signed-in or signed-out state. The page recovers. It existed before (auth gate in the root layout).
+3. ~~Not yet checked on a physical device.~~ Done: Len tested on a phone on 2026-10-22 ("it works fine").
+
+## Other baseline findings this resolved
+
+The redesign also fixed RECON §6.3 item 2 (scan-on-save dropped the prices) and item 3 (silent `Alert.alert` on web), and the Workflow 1–3 gaps for the map tab. The full status table is in [../RECON_REPORT.md](../RECON_REPORT.md) §7.

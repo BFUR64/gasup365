@@ -1,9 +1,9 @@
 # GasUp365 — Full Project Reconnaissance Report
 
 Created: 2026-10-21T10:55:54+08:00
-Updated: 2026-10-21T15:30:16+08:00
-Revision: 2
-Status: Baseline Audit
+Updated: 2026-10-22T20:01:25+08:00
+Revision: 3
+Status: Baseline Audit (sections 1–6 describe `main` at `c0207da` on 2026-10-21; section 7 gives the status after the UI redesign)
 
 > **Project Snapshot**: GasUp365 (`v1.0.0`) is a cross-platform (iOS, Android, Web) community-powered fuel price tracker and smart-route calculator built with **Expo SDK 55**, **React Native 0.83.6**, **React 19.2.0**, **Firebase (Auth + Firestore)**, and **Cloudinary**. The current MVP targets **Kalibo, Aklan, Philippines**.
 
@@ -207,3 +207,42 @@ Claude re-checked every claim in sections 1–5 against the source and git. All 
 3. **Silent errors on web**. `react-native-web` implements `Alert.alert` as a no-op, so every validation and error alert in `CameraCaptureScreen` is invisible on web.
 4. **More unused dependencies** (no imports in `src/`): `expo-image-picker`, `expo-image`, `react-native-vector-icons`, `expo-glass-effect`, `expo-symbols`, `expo-device`, `expo-web-browser`. Keep `@react-navigation/*`, `expo-constants` and `expo-linking`, because `expo-router` requires them.
 5. **Auth persistence confirmed**. In the React Native build of `@firebase/auth`, `getAuth()` logs a no-persistence warning and falls back to `initializeAuth` without persistence. `@react-native-async-storage/async-storage` is not installed.
+
+---
+
+## 7. Revision 3 — Status after the UI redesign (2026-10-22)
+
+Sections 1–6 are a snapshot of `main` at `c0207da` and are kept as written. The UI redesign (`e333f07`, `94497ea` on `feat/ui-redesign`) rewrote every screen, so some findings changed. Claude re-checked each one against the code on 2026-10-22.
+
+### 7.1 Git and tooling now
+
+- Branch `feat/ui-redesign` (`94497ea`) is 2 commits ahead of local `main` (`1a49a23`). Local `main` is 3 commits ahead of `origin/main` (`c0207da`) and has not been pushed.
+- There is still no CI (`.github/workflows/` does not exist) and no Firebase config (`firebase.json`, `firestore.rules`).
+- Tests: 6 suites, 27 tests. The 4 new suites cover `stationPresentation`, `pinHtml`, `scanReview` and `stationView`.
+
+### 7.2 Findings, then and now
+
+| Finding | Section | Status now | Evidence |
+| :--- | :--- | :--- | :--- |
+| `useMapMarkers` drops `prices` | 3.2, 5 (Workflow 1) | **Resolved** | `src/hooks/useMapMarkers.ts` now maps `prices` into `MapMarker`. |
+| Community markers missing from the Stations list and Smart Route | 5 (Workflow 1) | **Open (FEAT-001)** | `StationListPanel.tsx` and `DashboardScreen.tsx` still call `scoreStationsForRoute(stations, …)` on the 4 sample stations only. Community markers appear on the map and in the sheet as unscored `StationView`s. |
+| Dashboard scoring hardcoded to diesel | 5 (Workflow 1) | **Resolved** | `DashboardScreen.tsx` keeps a `fuel` state (default `diesel`) set from the fuel hotbar. |
+| Tapping a live marker only closes the card | 5 (Workflow 1) | **Resolved** | Every station, sample or community, opens `StationSheet` with a `NavigateButton` (`buildDirectionsUrl`). |
+| Cloudinary photo never shown | 5 (Workflow 2) | **Resolved** | `stationView.fromMarker` sets `photoUrl` from `imageUrl` (skipping `placehold.co`); `StationSheet.tsx` shows it with a full-screen view. |
+| Two competing map screens | 5 (Workflow 3) | **Mostly resolved** | The map tab now has the fuel hotbar, the sheet and the two-pane layout. The hidden `/map` route (`src/app/map.tsx`, `MapViewScreen.tsx`, `StationLeafletMap.tsx`, `StationMap.tsx`, `StationMap.native.tsx`, `StationCard.tsx`) still exists and is dead weight. |
+| Profile shows hardcoded stats | 5 (Workflow 4) | **Changed, still open (FEAT-003)** | `ProfileScreen.tsx` shows "—" for stats, rank "Rookie spotter" and locked badges. `users/{uid}` is still never read or updated, markers still have no `userId`, and the reward popup's coins are not saved. |
+| Legacy entry points, dead files, unused deps | 5 (Workflow 5), 6.3 item 4 | **Open (FEAT-004)** | See 7.3. |
+| Stored XSS in the mobile map popup | 6.3 item 1 | **Resolved** | Popups are gone. Pins are `divIcon` markup from `src/services/pinHtml.ts`, which escapes the only data value (the price label); covered by `pinHtml.test.ts`. Firestore rules are still missing, so any signed-in user can still write any `markers` document. |
+| Scan-on-save drops the scanned prices | 6.3 item 2 | **Resolved** | The flow is now Snap → Review → Share. `share()` in `CameraCaptureScreen.tsx` reads the reviewed `prices` state after the user has seen it, and `shareBlocker` disables Share until a price and a location exist. |
+| Silent `Alert.alert` errors on web | 6.3 item 3 | **Resolved** | No `Alert` calls remain in `src/screens` or `src/components`. Errors use the in-app `Dialog` and `Toast` (`src/components/ui/Dialog.tsx`). |
+| No auth persistence on mobile | 3.1, 6.3 item 5 | **Open** | `src/firebaseservices/firebase.ts` still calls `getAuth(app)`; AsyncStorage is not installed. |
+| `Pilipinas Shell` never matches | 6.2 | **Open** | `gasStationParser.ts` unchanged. |
+
+### 7.3 Cleanup list for FEAT-004 (current)
+
+- **Legacy entry points and prototypes**: `index.js`, `src/App.tsx`, `src/screens/LiveMap.tsx`, `src/services/priceExtraction.ts`.
+- **Hidden `/map` route**: `src/app/map.tsx` (plus its `Tabs.Screen` entry in `_layout.tsx`), `src/screens/MapViewScreen.tsx`, `StationLeafletMap.tsx`, `StationMap.tsx`, `StationMap.native.tsx`, `StationCard.tsx`.
+- **Duplicate Firebase module**: `src/services/firebase.ts` only re-exports `src/firebaseservices/firebase.ts`; `CameraCaptureScreen` uses one and `AuthScreen`/`ProfileScreen` the other.
+- **Dependencies only used by the files above**: `@expo/vector-icons` (now imported only by `App.tsx`, `MapViewScreen.tsx`, `StationCard.tsx`) and `expo-leaflet-navigation-map` (only `StationLeafletMap.tsx` and `screens/LiveMap.tsx`).
+- **Dependencies with no imports in `src/`**: `react-native-maps`, `@tzmax/ocr-common`, `react-native-vector-icons`, `expo-image`, `expo-image-picker`, `expo-glass-effect`, `expo-symbols`, `expo-device`, `expo-web-browser`. Check each against `app.json` plugins and Expo Router's peer requirements before removing.
+

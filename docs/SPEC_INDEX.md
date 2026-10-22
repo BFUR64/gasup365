@@ -1,19 +1,21 @@
 # Specification index
 
 Created: 2026-10-21T10:55:54+08:00
-Updated: 2026-10-22T09:40:00+08:00
+Updated: 2026-10-22T20:01:25+08:00
 
 | Category | ID | Current path | Revision | Status | Replaces |
 | --- | --- | --- | --- | --- | --- |
-| Handoff | HANDOFF | [../HANDOFF.md](../HANDOFF.md) | 1 | Awaiting approval | None |
-| Evidence | RECON-001 | [RECON_REPORT.md](RECON_REPORT.md) | 2 | Baseline Audit + verification addendum | Revision 1 |
-| Product | PROD-OVERVIEW | [product/OVERVIEW.md](product/OVERVIEW.md) | 1 | Draft | None |
-| Product | PROD-ARCH | [product/ARCHITECTURE.md](product/ARCHITECTURE.md) | 1 | Draft | None |
-| Product | PROD-DATA | [product/DATA_MODEL.md](product/DATA_MODEL.md) | 1 | Draft | None |
-| Product | PROD-CONSTRAINTS | [product/CONSTRAINTS.md](product/CONSTRAINTS.md) | 2 | Draft | Revision 1 |
+| Handoff | HANDOFF | [../HANDOFF.md](../HANDOFF.md) | 2 | Awaiting approval | Revision 1 |
+| Evidence | RECON-001 | [RECON_REPORT.md](RECON_REPORT.md) | 3 | Baseline Audit + verification addendum + post-redesign status | Revision 2 |
+| Product | PROD-OVERVIEW | [product/OVERVIEW.md](product/OVERVIEW.md) | 2 | Draft | Revision 1 |
+| Product | PROD-ARCH | [product/ARCHITECTURE.md](product/ARCHITECTURE.md) | 2 | Draft | Revision 1 |
+| Product | PROD-DATA | [product/DATA_MODEL.md](product/DATA_MODEL.md) | 2 | Draft | Revision 1 |
+| Product | PROD-CONSTRAINTS | [product/CONSTRAINTS.md](product/CONSTRAINTS.md) | 3 | Draft | Revision 2 |
 | Design | DESIGN-001 | [design/CLAUDE_DESIGN_SPEC.md](design/CLAUDE_DESIGN_SPEC.md) | 1 | Superseded by DESIGN-002 | None |
-| Design | DESIGN-002 | [design/CLAUDE_DESIGN_HANDOFF.md](design/CLAUDE_DESIGN_HANDOFF.md) | 1 | Draft | DESIGN-001 Revision 1 |
-| Evidence | UI-REDESIGN | [evidence/UI-REDESIGN-verification.md](evidence/UI-REDESIGN-verification.md) | 1 | Implemented, awaiting Len's review | None |
+| Design | DESIGN-002 | [design/CLAUDE_DESIGN_HANDOFF.md](design/CLAUDE_DESIGN_HANDOFF.md) | 1 | Draft; delivered to Claude Design and implemented | DESIGN-001 Revision 1 |
+| Evidence | UI-REDESIGN | [evidence/UI-REDESIGN-verification.md](evidence/UI-REDESIGN-verification.md) | 1 | Implemented; Len tested on a phone 2026-10-22 | None |
+
+No feature specs (`docs/features/`) or implementation plans (`docs/plans/`) exist yet. The backlog (FEAT-001 to FEAT-005) is listed in [product/OVERVIEW.md](product/OVERVIEW.md).
 
 ## Document-Driven Development Lifecycle
 

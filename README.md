@@ -36,18 +36,19 @@ The current MVP is focused on Kalibo, Aklan and already includes authentication,
 
 - 📸 **Scan Price Boards** – Capture fuel boards with `expo-camera`; mobile OCR uses `expo-text-recognition`.
 - 🧠 **OCR + Gas Station NLP** – Extracts station brands, address hints, GPS metadata, and fuel prices for diesel, unleaded, and special/premium.
-- 📝 **Manual Review Before Submit** – Users can correct OCR results before saving a station update.
+- 📝 **Snap → Review → Share** – Users check and correct the OCR results (each field is marked detected, edited or needs a check) before sharing a price.
 - 🔥 **Firebase Auth** – Email/password login and signup powered by Firebase Authentication.
-- 🗺️ **Live Price Map** – Firestore `markers` stream into a Leaflet/OpenStreetMap-powered map.
+- 🗺️ **Live Price Map** – Firestore `markers` stream into a Leaflet/OpenStreetMap map with pixel-art price pins and a tap-to-expand station sheet showing prices, Smart Route savings and the price board photo.
 - 📍 **GPS Location Capture** – Uses `expo-location` to place station updates on the map.
-- ⛽ **Fuel Filters** – Compare diesel, unleaded, and premium prices.
+- ⛽ **Fuel Filters** – Switch between diesel, unleaded, and premium from the fuel hotbar.
 - 💸 **Smart Route Savings** – Scores stations by fuel price, distance, estimated travel cost, and net pesos saved.
 - 📋 **Searchable Price List** – Sort stations by smart savings, nearest, or cheapest.
 - 🧭 **One-Tap Navigation** – Opens Google Maps driving directions to selected stations.
-- 👤 **Community Profile UI** – User profile, contribution stats, menu actions, and sign out flow.
-- 🧪 **Service Tests** – Jest tests cover OCR processing and gas station text parsing.
+- 👤 **Me Screen** – Character-sheet profile with sign out. Stats, ranks and badges are placeholders until contributor points are wired up.
+- 🎮 **Pixel Pump Town UI** – An original pixel-art game look with a hotbar tab bar, and a two-pane layout on wide screens.
+- 🧪 **Service Tests** – Jest tests cover OCR processing, gas station text parsing, station presentation, map pins, scan review rules, and station view models.
 
-> Note: Camera OCR is mobile-only in the current app. Web builds show a mobile OCR notice while still supporting the map/list experience.
+> Note: Camera OCR is mobile-only in the current app. Web builds show a mobile OCR notice while still supporting manual price entry and the map and station list. Smart Route and the Stations list currently score only the 4 Kalibo sample stations; community updates appear on the map.
 
 ## 🖼 Screenshots & Demo
 
@@ -83,9 +84,10 @@ Suggested captures:
 | Camera | `expo-camera` |
 | OCR | `expo-text-recognition` |
 | Location | `expo-location` |
-| Maps | Leaflet, OpenStreetMap tiles, `react-native-webview`, `expo-leaflet-navigation-map` |
-| Icons | Feather icons via `@expo/vector-icons`, Expo Symbols |
-| Styling | React Native `StyleSheet`, shared color theme |
+| Maps | Leaflet, OpenStreetMap tiles, `react-native-webview` |
+| Icons | Custom pixel-art icons and sprites drawn with `react-native-svg` |
+| Fonts | Pixelify Sans, Silkscreen, Nunito via `@expo-google-fonts/*` |
+| Styling | React Native `StyleSheet` with shared design tokens in `src/theme/` |
 | State | React hooks, local state, Firestore realtime snapshots |
 | Testing | Jest, ts-jest |
 | Linting | Expo ESLint config |
@@ -113,7 +115,7 @@ cd gasup365
 ### 2. Install dependencies
 
 ```bash
-npm install
+npm ci
 ```
 
 ### 3. Configure Firebase
@@ -163,8 +165,9 @@ npm run web
 ### 5. Run quality checks
 
 ```bash
-npm run lint
 npm test
+npm run lint
+npx tsc --noEmit
 ```
 
 ## 🗂 Project Structure
@@ -179,21 +182,23 @@ gasup365/
 ├── scripts/                     # Expo project utility scripts
 └── src/
     ├── app/                     # Expo Router tab routes
-    │   ├── _layout.tsx          # Auth gate + tab navigation
-    │   ├── index.tsx            # Dashboard route
-    │   ├── add.tsx              # Camera/OCR submission route
-    │   ├── list.tsx             # Station list route
-    │   ├── map.tsx              # Map dashboard route
-    │   └── profile.tsx          # Profile route
-    ├── components/              # Shared UI components
-    ├── data/                    # Kalibo prototype station data
+    │   ├── _layout.tsx          # Fonts, auth gate + Hotbar tab navigation
+    │   ├── index.tsx            # Map tab
+    │   ├── list.tsx             # Stations tab
+    │   ├── add.tsx              # Scan tab (camera/OCR)
+    │   ├── profile.tsx          # Me tab
+    │   └── map.tsx              # Hidden legacy map route (to be removed)
+    ├── components/              # Map, station sheet, list, Hotbar, reward popup
+    │   └── ui/                  # Pixel buttons, inputs, dialogs, tags, stepper
+    ├── data/                    # Kalibo sample station data
     ├── firebaseservices/        # Firebase initialization
-    ├── hooks/                   # Firestore realtime marker hooks
-    ├── screens/                 # App screens and screen-specific components
-    ├── services/                # OCR parsing, routing, price extraction
+    ├── hooks/                   # Firestore markers, user location, layout
+    ├── screens/                 # App screens
+    ├── services/                # OCR parsing, routing, station view models, pins, scan review
     ├── test/                    # Test mocks
-    ├── theme/                   # Shared color palette
-    └── types/                   # Shared TypeScript types
+    ├── theme/                   # Colors, type scale, shadows, spacing
+    ├── types/                   # Shared TypeScript types
+    └── ui/                      # Pixel-art icons and sprites
 ```
 
 ## 📱 Usage
@@ -201,19 +206,19 @@ gasup365/
 ### Scan and submit a station update
 
 1. Sign in or create an account.
-2. Tap **Add**.
+2. Tap **Scan**.
 3. Allow camera and location permissions.
-4. Scan a fuel station price board.
-5. Review the extracted station name, location, and fuel prices.
-6. Correct any missing fields.
-7. Save the update to the live map.
+4. Snap a fuel station price board (or type the prices).
+5. Review the extracted station name, address, and fuel prices.
+6. Fix anything marked for a check.
+7. Tap **Share price** to add the update to the live map.
 
 ### Find the best fuel stop
 
-1. Open the map or list view.
+1. Open the **Map** or **Stations** tab.
 2. Choose a fuel type: diesel, unleaded, or premium.
-3. Sort by smart savings, nearest, or cheapest.
-4. Tap a station card to inspect prices and route savings.
+3. On Stations, sort by smart savings, nearest, or cheapest.
+4. Tap a station pin or row to see its prices and route savings.
 5. Tap **Navigate** to open Google Maps directions.
 
 ### Contribute better data
@@ -227,9 +232,10 @@ Contributions are welcome.
 Before opening a pull request:
 
 ```bash
-npm install
-npm run lint
+npm ci
 npm test
+npm run lint
+npx tsc --noEmit
 ```
 
 Good first contribution areas:
@@ -254,6 +260,8 @@ Please keep changes focused, tested, and aligned with the app’s mission: helpi
 - ✅ Kalibo fuel map and station list
 - ✅ Smart route savings calculation
 - ✅ Google Maps navigation links
+- ✅ Pixel Pump Town UI redesign
+- 🚧 Community updates in Smart Route and the station list
 - 🚧 Screenshot/demo documentation
 
 ### Phase 2 – Community Trust
