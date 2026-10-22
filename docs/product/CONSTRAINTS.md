@@ -47,6 +47,7 @@ Every feature or bugfix in GasUp365 must progress through these five explicit ga
 - **Emulator / Web Runtime Checks**:
   - `npx expo export --platform web` and `npx expo export --platform android` must pass.
   - UI changes: screenshots of the web export at 390 × 844 and 1440 × 900.
+- **Firestore rules**: `npm run test:rules` (needs Java; runs the emulator on port 8181) whenever `firestore.rules` or a Firestore write changes.
 - **CI**: none. The repo has no `.github/workflows/`, so every gate is run by hand and recorded in the verification log.
 - **Physical Device Checks (Len-Executed)**:
   - Live `expo-camera` capture and on-device `expo-text-recognition` OCR on a physical Android/iOS device remain `Pending` in `docs/evidence/FEAT-NNN-verification.md` until verified by Len.

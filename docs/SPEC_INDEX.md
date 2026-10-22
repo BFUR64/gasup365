@@ -13,6 +13,7 @@ Updated: 2026-10-22T20:01:25+08:00
 | Product | PROD-CONSTRAINTS | [product/CONSTRAINTS.md](product/CONSTRAINTS.md) | 3 | Draft | Revision 2 |
 | Design | DESIGN-001 | [design/CLAUDE_DESIGN_SPEC.md](design/CLAUDE_DESIGN_SPEC.md) | 1 | Superseded by DESIGN-002 | None |
 | Design | DESIGN-002 | [design/CLAUDE_DESIGN_HANDOFF.md](design/CLAUDE_DESIGN_HANDOFF.md) | 1 | Draft; delivered to Claude Design and implemented | DESIGN-001 Revision 1 |
+| Evidence | FIRESTORE-RULES | [evidence/FIRESTORE-RULES-verification.md](evidence/FIRESTORE-RULES-verification.md) | 1 | Rules written and tested in the emulator; not deployed | None |
 | Evidence | UI-REDESIGN | [evidence/UI-REDESIGN-verification.md](evidence/UI-REDESIGN-verification.md) | 1 | Implemented; Len tested on a phone 2026-10-22 | None |
 
 No feature specs (`docs/features/`) or implementation plans (`docs/plans/`) exist yet. The backlog (FEAT-001 to FEAT-005) is listed in [product/OVERVIEW.md](product/OVERVIEW.md).

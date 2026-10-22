@@ -217,7 +217,7 @@ Sections 1–6 are a snapshot of `main` at `c0207da` and are kept as written. Th
 ### 7.1 Git and tooling now
 
 - Branch `feat/ui-redesign` (`94497ea`) is 2 commits ahead of local `main` (`1a49a23`). Local `main` is 3 commits ahead of `origin/main` (`c0207da`) and has not been pushed.
-- There is still no CI (`.github/workflows/` does not exist) and no Firebase config (`firebase.json`, `firestore.rules`).
+- There is still no CI (`.github/workflows/` does not exist). `firebase.json`, `.firebaserc` and `firestore.rules` were added later on 2026-10-22 at Len's request (not deployed); see [evidence/FIRESTORE-RULES-verification.md](evidence/FIRESTORE-RULES-verification.md).
 - Tests: 6 suites, 27 tests. The 4 new suites cover `stationPresentation`, `pinHtml`, `scanReview` and `stationView`.
 
 ### 7.2 Findings, then and now
@@ -232,7 +232,7 @@ Sections 1–6 are a snapshot of `main` at `c0207da` and are kept as written. Th
 | Two competing map screens | 5 (Workflow 3) | **Mostly resolved** | The map tab now has the fuel hotbar, the sheet and the two-pane layout. The hidden `/map` route (`src/app/map.tsx`, `MapViewScreen.tsx`, `StationLeafletMap.tsx`, `StationMap.tsx`, `StationMap.native.tsx`, `StationCard.tsx`) still exists and is dead weight. |
 | Profile shows hardcoded stats | 5 (Workflow 4) | **Changed, still open (FEAT-003)** | `ProfileScreen.tsx` shows "—" for stats, rank "Rookie spotter" and locked badges. `users/{uid}` is still never read or updated, markers still have no `userId`, and the reward popup's coins are not saved. |
 | Legacy entry points, dead files, unused deps | 5 (Workflow 5), 6.3 item 4 | **Open (FEAT-004)** | See 7.3. |
-| Stored XSS in the mobile map popup | 6.3 item 1 | **Resolved** | Popups are gone. Pins are `divIcon` markup from `src/services/pinHtml.ts`, which escapes the only data value (the price label); covered by `pinHtml.test.ts`. Firestore rules are still missing, so any signed-in user can still write any `markers` document. |
+| Stored XSS in the mobile map popup | 6.3 item 1 | **Resolved** | Popups are gone. Pins are `divIcon` markup from `src/services/pinHtml.ts`, which escapes the only data value (the price label); covered by `pinHtml.test.ts`. Firestore rules were missing at the time of this check; they are now in `firestore.rules` but not deployed. |
 | Scan-on-save drops the scanned prices | 6.3 item 2 | **Resolved** | The flow is now Snap → Review → Share. `share()` in `CameraCaptureScreen.tsx` reads the reviewed `prices` state after the user has seen it, and `shareBlocker` disables Share until a price and a location exist. |
 | Silent `Alert.alert` errors on web | 6.3 item 3 | **Resolved** | No `Alert` calls remain in `src/screens` or `src/components`. Errors use the in-app `Dialog` and `Toast` (`src/components/ui/Dialog.tsx`). |
 | No auth persistence on mobile | 3.1, 6.3 item 5 | **Open** | `src/firebaseservices/firebase.ts` still calls `getAuth(app)`; AsyncStorage is not installed. |

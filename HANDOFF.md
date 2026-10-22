@@ -62,6 +62,7 @@ Architecture and behavior changes return to Len; this handoff cannot override th
 - **UI redesign (2026-10-22)**: every canvas artboard built on `feat/ui-redesign`: pixel theme tokens, custom pixel icons and sprites, Hotbar tab bar and wide rail, Auth/Boot title scene, World + HUD map with escaped pixel pins and a tap-to-expand sheet, leaderboard Stations, Snap → Review → Share scan flow with in-app dialogs and toasts, reward popup, Me character sheet, 1440 px two-pane. Prices use Nunito (Len's choice).
 - **Documentation refresh (2026-10-22)**: every doc updated to match the code after the redesign.
 - **Device check (2026-10-22)**: Len tested the redesign on a phone: "it works fine".
+- **Firestore rules (2026-10-22)**: `firestore.rules`, `firebase.json`, `.firebaserc`, and 10 emulator tests (`npm run test:rules`). **Not deployed.** See [docs/evidence/FIRESTORE-RULES-verification.md](docs/evidence/FIRESTORE-RULES-verification.md).
 
 ### Feature backlog status (after the UI redesign)
 
@@ -84,6 +85,7 @@ Architecture and behavior changes return to Len; this handoff cannot override th
 | Web static export | `npx expo export --platform web` | Git Bash | Pass | All 7 static routes rendered, before and after the fix. |
 | UI redesign gates | `npm test`, `npm run lint`, `npx tsc --noEmit`, web and Android exports | Git Bash, 2026-10-22 | Pass (6 suites, 27 tests; 0 lint problems; 0 type errors) | Plus headless Edge screenshots of the web export. Not run on a physical device. |
 | Documentation refresh | None (docs only) | 2026-10-22 | Not run | No code changed, so the gates were not rerun. |
+| Firestore rules | `npm run test:rules` | PowerShell and Git Bash, Java 24.0.2, 2026-10-22 | Pass (1 suite, 10 tests) | Emulator on port 8181 (8080 is taken by `httpd`). On Windows the emulator's Java process stays running afterwards; stop it before the next run. `npm test` (27), lint and tsc rerun: pass. |
 | Physical device | Manual, by Len | Phone (model not recorded), 2026-10-22 | Pass | Len: "I've already tested the app on a phone it works fine". |
 
 ## Blockers and attempts
@@ -91,6 +93,7 @@ Architecture and behavior changes return to Len; this handoff cannot override th
 | Problem | Fix-and-check attempts used (maximum 3) | Changes tried and observed result | Required decision or access |
 | --- | --- | --- | --- |
 | `node_modules` not installed in workspace | Resolved | `npm ci` installed 1084 packages, exit 0 | None |
+| `npm run test:rules` fails with "Could not start Firestore Emulator, port taken" | Resolved (2 attempts) | Attempt 1: port 8080 is held by `httpd`; moved the emulator to 8181. Attempt 2: the next run hit the same error because the previous run's emulator Java process was still listening on 8181 (a Windows `emulators:exec` issue). Stopping that process fixes it; documented in the verification log. | None |
 | Lint and typecheck fail on `@expo/vector-icons` | Resolved (lint took 2 attempts) | Attempt 1: `npx expo install @expo/vector-icons` fixed tsc, but lint still failed because `expo lint` reused a stale cache, and npm 11.9 also stripped unrelated `libc` fields from the lockfile. Attempt 2: rebuilt the lockfile from HEAD with only the vector-icons entry moved, `npm ci` accepted it, cleared `.expo/cache/eslint`, and all gates passed. | None |
 
 Do not reset a count on a new session or silently reinterpret a failed check as passing.

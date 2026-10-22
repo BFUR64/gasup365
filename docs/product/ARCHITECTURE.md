@@ -89,7 +89,9 @@ flowchart LR
    - Screens render stations through `StationView` (`stationView.ts`): `fromScore` for scored sample stations, `fromMarker` for community markers. Today only sample stations are scored and listed; FEAT-001 should make community markers flow through `scoreStationsForRoute` and the Stations list as well.
 4. **No raw data in HTML**:
    - Any Firestore value placed in map markup must go through `escapeHtml` (`pinHtml.ts`).
-5. **No `Alert.alert`**:
+5. **Rules follow the writers**:
+   - `firestore.rules` accepts exactly the fields `CameraCaptureScreen` and `AuthScreen` write. Any change to a Firestore write needs a matching rules change and a `firestore/rules.test.ts` case.
+6. **No `Alert.alert`**:
    - `react-native-web` implements it as a no-op, so user-facing messages use `Dialog` and `Toast` from `src/components/ui/Dialog.tsx`.
 
 ## Decisions and trade-offs
@@ -106,5 +108,5 @@ flowchart LR
 ## Open questions and approval
 
 - **Question 1 (resolved by the redesign, needs confirmation)**: Revision 1 asked whether to remove the hidden `/map` route once its features moved into `DashboardScreen`. They have moved. **Proposed**: delete `src/app/map.tsx`, `MapViewScreen.tsx`, `StationLeafletMap.tsx`, `StationMap.tsx`, `StationMap.native.tsx` and `StationCard.tsx` in FEAT-004.
-- **Question 2**: Add `firestore.rules` to the repo (and to the FEAT-001 scope) so a signed-in user can only create well-formed `markers` and edit their own `users/{uid}`? **Proposed**: yes.
+- **Question 2 (answered 2026-10-22)**: Add `firestore.rules` to the repo? Len: "yes add firestore security rules". Done; see [../evidence/FIRESTORE-RULES-verification.md](../evidence/FIRESTORE-RULES-verification.md). Not deployed yet.
 - **Len's Approval**: *Pending chat review and approval of Revision 2.*

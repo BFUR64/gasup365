@@ -146,7 +146,7 @@ Enable these Firebase services:
 - Firestore Database
 - Analytics, optional for supported web runtimes
 
-The app currently reads and writes station updates in the `markers` collection.
+The app reads and writes station updates in the `markers` collection and creates a profile in `users/{uid}` at sign-up. Deploy the security rules in `firestore.rules` with `npx firebase-tools deploy --only firestore:rules`.
 
 ### 4. Start the Expo development server
 
@@ -168,6 +168,7 @@ npm run web
 npm test
 npm run lint
 npx tsc --noEmit
+npm run test:rules   # Firestore rules, in the emulator (needs Java)
 ```
 
 ## 🗂 Project Structure
