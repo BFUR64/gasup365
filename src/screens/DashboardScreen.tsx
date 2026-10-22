@@ -177,7 +177,7 @@ export const DashboardScreen: React.FC = () => {
       {loading ? (
         <ActivityIndicator color={colors.surfaceTint} size="small" accessibilityLabel="Loading community prices" />
       ) : (
-        <Text style={[type.displayMd, styles.counterValue]}>{views.length}</Text>
+        <Text style={[type.priceMd, styles.counterValue]}>{views.length}</Text>
       )}
       <Text style={[type.tag, styles.counterLabel]}>stations</Text>
     </View>
@@ -293,7 +293,7 @@ export const DashboardScreen: React.FC = () => {
               </Text>
               <Text style={[type.bodyStrong, { color: banner.positive ? colors.success : colors.text }]}>{banner.line}</Text>
             </View>
-            <Text style={[type.displayMd, { color: colors.text }]}>{formatPeso(best.fuelPrice)}</Text>
+            <Text style={[type.priceMd, { color: colors.text }]}>{formatPeso(best.fuelPrice)}</Text>
             <PixelIcon name="chevronRight" size={16} />
           </Pressable>
         )}
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.outline,
     boxShadow: shadow.drop,
   },
-  counterValue: { color: colors.surfaceTint, fontFamily: type.priceLg.fontFamily },
+  counterValue: { color: colors.surfaceTint },
   counterLabel: { color: colors.surfaceTint },
   banner: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingLeft: 12, paddingRight: 8 },
   bannerIcon: {

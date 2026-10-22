@@ -73,7 +73,7 @@ const SmartRouteBox: React.FC<{ station: StationView; fuel: FuelType; alwaysExpl
           </Pressable>
         )}
       </View>
-      <Text style={[type.displayMd, { color: positive ? colors.success : colors.danger }]}>{formatNetHeadline(score.pesosSaved)}</Text>
+      <Text style={[type.priceMd, { color: positive ? colors.success : colors.danger }]}>{formatNetHeadline(score.pesosSaved)}</Text>
       <Text style={[type.bodyStrong, { color: colors.text }]}>{netVerdict(score)}</Text>
       <Text style={[type.caption, { color: colors.textMuted }]}>
         {formatBreakdown(score)} ({(score.distanceKm * 2).toFixed(1)} km round trip)
@@ -236,8 +236,8 @@ const styles = StyleSheet.create({
   slots: { flexDirection: 'row', gap: 8 },
   slot: { flex: 1, padding: 8, gap: 2, borderWidth: 2, borderColor: colors.outline },
   slotLabel: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  slotPrice: { ...type.displayMd, fontFamily: type.priceLg.fontFamily, fontSize: 24 },
-  slotPriceMd: { ...type.displaySm, fontFamily: type.priceLg.fontFamily },
+  slotPrice: { ...type.priceMd, fontSize: 24, lineHeight: 30 },
+  slotPriceMd: { ...type.priceMd, fontSize: 18, lineHeight: 24 },
   routeBox: { borderWidth: 2, borderColor: colors.outline, paddingHorizontal: 12, paddingVertical: 10, gap: 4 },
   routeHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' },
   tipButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 4, marginVertical: -8 },

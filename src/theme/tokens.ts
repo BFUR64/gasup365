@@ -12,10 +12,12 @@ export const fonts = {
     body800: 'Nunito_800ExtraBold',
 };
 
-// Type scale (DESIGN-002 §5.4).
+// Type scale (DESIGN-002 §5.4). Prices use Nunito, not Pixelify Sans: Pixelify's
+// stylised 2/3/5 made ₱61.50 read as ₱61.S0, and it has no ₱ glyph (Len, 2026-10-22).
 export const type = {
-    priceHero: { fontFamily: fonts.display700, fontSize: 40, lineHeight: 44 },
-    priceLg: { fontFamily: fonts.display700, fontSize: 28, lineHeight: 32 },
+    priceHero: { fontFamily: fonts.body800, fontSize: 40, lineHeight: 48 },
+    priceLg: { fontFamily: fonts.body800, fontSize: 28, lineHeight: 34 },
+    priceMd: { fontFamily: fonts.body800, fontSize: 22, lineHeight: 28 },
     displayLg: { fontFamily: fonts.display700, fontSize: 28, lineHeight: 32 },
     displayMd: { fontFamily: fonts.display600, fontSize: 22, lineHeight: 28 },
     displaySm: { fontFamily: fonts.display600, fontSize: 18, lineHeight: 24 },

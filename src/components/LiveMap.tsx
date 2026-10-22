@@ -86,7 +86,7 @@ const buildMobileHtml = (init: object) => `<!DOCTYPE html>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <link rel="stylesheet" href="${LEAFLET_CSS_URL}" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@800&display=swap" />
     <script src="${LEAFLET_JS_URL}"></script>
     <style>html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; }${PIN_CSS}</style>
   </head>

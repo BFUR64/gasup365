@@ -65,7 +65,7 @@ export const PIN_CSS = `
 .gu-pin-inner{width:${PIN_WIDTH}px;display:flex;flex-direction:column;align-items:center;gap:${GAP}px}
 .gu-crown{height:${CROWN_HEIGHT}px;display:block}
 .gu-crown svg{display:block;animation:gu-bob .6s steps(1) infinite}
-.gu-bubble{height:${BUBBLE_HEIGHT}px;box-sizing:border-box;padding:0 6px;border:2px solid #3B1A08;background:#FFFFFF;color:#1F2933;font:16px/20px 'PixelifySans_700Bold','Pixelify Sans',system-ui,sans-serif;font-weight:700;white-space:nowrap;box-shadow:0 2px 0 rgba(59,26,8,.35)}
+.gu-bubble{height:${BUBBLE_HEIGHT}px;box-sizing:border-box;padding:0 6px;border:2px solid #3B1A08;background:#FFFFFF;color:#1F2933;font:16px/20px 'Nunito_800ExtraBold','Nunito',system-ui,sans-serif;font-weight:800;white-space:nowrap;box-shadow:0 2px 0 rgba(59,26,8,.35)}
 .gu-best{background:#FFD54A}
 .gu-selected{background:#F97316}
 .gu-empty{background:#F8F2EC;border-style:dashed;opacity:.75}

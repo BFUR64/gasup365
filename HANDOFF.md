@@ -86,7 +86,7 @@ Do not reset a count on a new session or silently reinterpret a failed check as 
 
 ## Next action
 
-- UI redesign: Len to review on a phone (camera, OCR, WebView map, safe areas) and decide on the Pixelify Sans price digits (verification log, open issue 1). Then merge `feat/ui-redesign`.
+- UI redesign: Len to review on a phone (camera, OCR, WebView map, safe areas), then merge `feat/ui-redesign`. Prices now use Nunito (Len's choice, 2026-10-22); rank and stepper numbers are still Pixelify (verification log, open issue 1).
 
 0. Len to decide whether to fix the unescaped marker popup HTML in the mobile WebView (`src/components/LiveMap.tsx:148`) and add Firestore rules before FEAT-001 (see [docs/RECON_REPORT.md](docs/RECON_REPORT.md) §6.3).
 1. Obtain Len's review and approval of the baseline product docs (`docs/product/*`) and select the first feature to spec in detail (recommended: **FEAT-001: Unified Live Station Data & Smart Routing Pipeline**).
