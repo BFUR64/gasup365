@@ -1,18 +1,26 @@
-import { Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold } from '@expo-google-fonts/nunito';
-import { PixelifySans_500Medium, PixelifySans_600SemiBold, PixelifySans_700Bold } from '@expo-google-fonts/pixelify-sans';
-import { Silkscreen_400Regular } from '@expo-google-fonts/silkscreen';
-import { useFonts } from 'expo-font';
-import { Tabs } from 'expo-router';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import React, { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
-import { Hotbar } from '../components/Hotbar';
-import { PixelScene } from '../components/PixelScene';
-import { auth } from '../firebaseservices/firebase';
-import { useIsWide } from '../hooks/useLayout';
-import { AuthScreen } from '../screens/AuthScreen';
-import { colors, palette } from '../theme/colors';
-import { fonts } from '../theme/tokens';
+import {
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+} from "@expo-google-fonts/nunito";
+import {
+  PixelifySans_500Medium,
+  PixelifySans_600SemiBold,
+  PixelifySans_700Bold,
+} from "@expo-google-fonts/pixelify-sans";
+import { Silkscreen_400Regular } from "@expo-google-fonts/silkscreen";
+import { useFonts } from "expo-font";
+import { Tabs } from "expo-router";
+import { User, onAuthStateChanged } from "firebase/auth";
+import React, { useEffect, useState } from "react";
+import { Image, StyleSheet, Text, View } from "react-native";
+import { Hotbar } from "../components/Hotbar";
+import { PixelScene } from "../components/PixelScene";
+import { auth } from "../firebaseservices/firebase";
+import { useIsWide } from "../hooks/useLayout";
+import { AuthScreen } from "../screens/AuthScreen";
+import { colors, palette } from "../theme/colors";
+import { fonts } from "../theme/tokens";
 
 export default function RootLayout() {
   const [user, setUser] = useState<User | null>(null);
@@ -48,18 +56,18 @@ export default function RootLayout() {
 
   return (
     <Tabs
-      tabBar={(props) => <Hotbar {...props} />}
+      tabBar={(props) => <Hotbar {...(props as any)} />}
       screenOptions={{
         headerShown: false,
-        tabBarPosition: wide ? 'left' : 'bottom',
+        tabBarPosition: wide ? "left" : "bottom",
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Map' }} />
+      <Tabs.Screen name="index" options={{ title: "Map" }} />
       <Tabs.Screen name="map" options={{ href: null }} />
-      <Tabs.Screen name="list" options={{ title: 'Stations' }} />
-      <Tabs.Screen name="add" options={{ title: 'Scan' }} />
-      <Tabs.Screen name="profile" options={{ title: 'Me' }} />
+      <Tabs.Screen name="list" options={{ title: "Stations" }} />
+      <Tabs.Screen name="add" options={{ title: "Scan" }} />
+      <Tabs.Screen name="profile" options={{ title: "Me" }} />
     </Tabs>
   );
 }
@@ -69,7 +77,11 @@ const BootScreen: React.FC = () => (
   <View style={styles.boot}>
     <PixelScene />
     <View style={styles.bootContent} accessibilityLabel="Loading GasUp365">
-      <Image source={require('../../assets/images/Gasup.png')} style={styles.bootLogo} accessibilityLabel="GasUp365" />
+      <Image
+        source={require("../../assets/images/Gasup.png")}
+        style={styles.bootLogo}
+        accessibilityLabel="GasUp365"
+      />
       <Text style={styles.bootTag}>LOADING…</Text>
     </View>
   </View>
@@ -77,7 +89,14 @@ const BootScreen: React.FC = () => (
 
 const styles = StyleSheet.create({
   boot: { flex: 1, backgroundColor: palette.grass400 },
-  bootContent: { position: 'absolute', left: 0, right: 0, top: '40%', alignItems: 'center', gap: 12 },
+  bootContent: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: "40%",
+    alignItems: "center",
+    gap: 12,
+  },
   bootLogo: { width: 312, height: 75 },
   bootTag: {
     fontFamily: fonts.tag,

@@ -1,8 +1,12 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
-import { getAuth } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// Import initializeAuth and getReactNativePersistence instead of getAuth
+import { initializeAuth, getReactNativePersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -15,15 +19,20 @@ const firebaseConfig = {
   storageBucket: "gasup365.firebasestorage.app",
   messagingSenderId: "813417593461",
   appId: "1:813417593461:web:770f0e3982597d812b963c",
-  measurementId: "G-HWNH32P5X0"
+  measurementId: "G-HWNH32P5X0",
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-const auth = getAuth(app);
+// Initialize Auth for React Native with AsyncStorage persistence
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage),
+});
+
 const db = getFirestore(app);
 
+// Analytics is optional and may not work in all RN environments
 if (typeof window !== "undefined") {
   isSupported().then((supported) => {
     if (supported) {
@@ -32,4 +41,4 @@ if (typeof window !== "undefined") {
   });
 }
 
-export { app, auth, db };
+export { app, db };
