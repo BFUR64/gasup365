@@ -1,15 +1,40 @@
-import { Feather } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { auth } from '../firebaseservices/firebase';
-import { AuthScreen } from '../screens/AuthScreen';
-import { colors } from '../theme/colors';
+import {
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+} from "@expo-google-fonts/nunito";
+import {
+  PixelifySans_500Medium,
+  PixelifySans_600SemiBold,
+  PixelifySans_700Bold,
+} from "@expo-google-fonts/pixelify-sans";
+import { Silkscreen_400Regular } from "@expo-google-fonts/silkscreen";
+import { useFonts } from "expo-font";
+import { Tabs } from "expo-router";
+import { User, onAuthStateChanged } from "firebase/auth";
+import React, { useEffect, useState } from "react";
+import { Image, StyleSheet, Text, View } from "react-native";
+import { Hotbar } from "../components/Hotbar";
+import { PixelScene } from "../components/PixelScene";
+import { auth } from "../firebaseservices/firebase";
+import { useIsWide } from "../hooks/useLayout";
+import { AuthScreen } from "../screens/AuthScreen";
+import { colors, palette } from "../theme/colors";
+import { fonts } from "../theme/tokens";
 
 export default function RootLayout() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const wide = useIsWide();
+  const [fontsLoaded, fontError] = useFonts({
+    PixelifySans_500Medium,
+    PixelifySans_600SemiBold,
+    PixelifySans_700Bold,
+    Silkscreen_400Regular,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+  });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
@@ -20,12 +45,9 @@ export default function RootLayout() {
     return unsubscribe;
   }, []);
 
-  if (isLoadingAuth) {
-    return (
-      <View style={styles.loadingScreen}>
-        <ActivityIndicator color={colors.primary} size="large" />
-      </View>
-    );
+  // A font failure falls back to system fonts rather than blocking the app.
+  if (isLoadingAuth || (!fontsLoaded && !fontError)) {
+    return <BootScreen />;
   }
 
   if (!user) {
@@ -34,84 +56,56 @@ export default function RootLayout() {
 
   return (
     <Tabs
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName: keyof typeof Feather.glyphMap;
-          if (route.name === 'index' || route.name === 'map') iconName = 'map';
-          else if (route.name === 'list') iconName = 'list';
-          else if (route.name === 'profile') iconName = 'user';
-          else iconName = 'camera';
-          return <Feather name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.muted,
+      tabBar={(props) => <Hotbar {...(props as any)} />}
+      screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarLabelStyle: styles.tabBarLabelStyle,
-      })}
+        tabBarPosition: wide ? "left" : "bottom",
+        sceneStyle: { backgroundColor: colors.bg },
+      }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Home' }} />
+      <Tabs.Screen name="index" options={{ title: "Map" }} />
       <Tabs.Screen name="map" options={{ href: null }} />
-      <Tabs.Screen name="list" options={{ title: 'List' }} />
-      <Tabs.Screen
-        name="add"
-        options={{
-          title: 'Add',
-          tabBarButton: (props) => (
-            <TouchableOpacity
-              style={styles.floatingButton}
-              onPress={props.onPress}
-              activeOpacity={0.8}
-            >
-              <View style={styles.floatingInner}>
-                <Feather name="camera" size={28} color="white" />
-                <Text style={styles.floatingText}>Add</Text>
-              </View>
-            </TouchableOpacity>
-          ),
-        }}
-      />
-      <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+      <Tabs.Screen name="list" options={{ title: "Stations" }} />
+      <Tabs.Screen name="add" options={{ title: "Scan" }} />
+      <Tabs.Screen name="profile" options={{ title: "Me" }} />
     </Tabs>
   );
 }
 
+// Session check: the Kalibo scene with the logo and a LOADING tag (DESIGN-002 §7.1).
+const BootScreen: React.FC = () => (
+  <View style={styles.boot}>
+    <PixelScene />
+    <View style={styles.bootContent} accessibilityLabel="Loading GasUp365">
+      <Image
+        source={require("../../assets/images/Gasup.png")}
+        style={styles.bootLogo}
+        accessibilityLabel="GasUp365"
+      />
+      <Text style={styles.bootTag}>LOADING…</Text>
+    </View>
+  </View>
+);
+
 const styles = StyleSheet.create({
-  loadingScreen: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.background,
+  boot: { flex: 1, backgroundColor: palette.grass400 },
+  bootContent: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: "40%",
+    alignItems: "center",
+    gap: 12,
   },
-  tabBar: {
-    height: 72,
-    paddingBottom: 10,
-    paddingTop: 6,
-    backgroundColor: colors.card,
-    borderTopColor: colors.border,
-  },
-  tabBarLabelStyle: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  floatingButton: {
-    top: -20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  floatingInner: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    boxShadow: '0 8px 18px rgba(194, 65, 12, 0.28)',
-  },
-  floatingText: {
-    color: 'white',
-    fontSize: 10,
-    marginTop: 2,
-    fontWeight: '600',
+  bootLogo: { width: 312, height: 75 },
+  bootTag: {
+    fontFamily: fonts.tag,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 0.5,
+    color: colors.surfaceTint,
+    backgroundColor: colors.outline,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
   },
 });

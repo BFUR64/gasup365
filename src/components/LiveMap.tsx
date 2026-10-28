@@ -1,341 +1,221 @@
-import * as Location from 'expo-location';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { WebView } from 'react-native-webview';
 import type { WebViewMessageEvent } from 'react-native-webview';
-import type * as Leaflet from 'leaflet';
-import { colors } from '../theme/colors';
+import { MapPin, PIN_CSS, USER_MARKER_HTML } from '../services/pinHtml';
+import { colors, palette } from '../theme/colors';
+import { pixel } from '../theme/pixel';
+import { type } from '../theme/tokens';
+import { art } from '../ui/pixelArt';
+import { Sprite } from './ui/PixelIcon';
 
-export interface LiveMapMarker {
-  id: string;
-  lat: number;
-  lng: number;
-  title: string;
-  description?: string;
+export interface LiveMapHandle {
+  zoomIn: () => void;
+  zoomOut: () => void;
+  recenter: (center: [number, number]) => void;
 }
 
 interface LiveMapProps {
-  markers: LiveMapMarker[];
-  center: [number, number];
+  pins: MapPin[];
+  initialCenter: [number, number];
   zoom: number;
-  onMarkerPress?: (markerId: string) => void;
+  userLocation: [number, number] | null;
+  followUser: boolean;
+  onPinPress: (pinId: string) => void;
+  onMapPress: () => void;
+  onError: () => void;
+  ref?: React.Ref<LiveMapHandle>;
 }
 
-const KALIBO_CENTER: [number, number] = [11.7089, 122.364];
+type MapCommand =
+  | { type: 'pins'; pins: MapPin[] }
+  | { type: 'user'; center: [number, number]; html: string }
+  | { type: 'zoomIn' }
+  | { type: 'zoomOut' }
+  | { type: 'recenter'; center: [number, number] }
+  | { type: 'resize' }
+  | { type: 'destroy' };
+
+type MapEvent = { type: 'ready' } | { type: 'error' } | { type: 'map_press' } | { type: 'pin_press'; id: string };
+
 const OSM_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-const MARKER_ICON_URL = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png';
-const MARKER_ICON_2X_URL = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png';
-const MARKER_SHADOW_URL = 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png';
 const LEAFLET_CSS_URL = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+const LEAFLET_JS_URL = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+const PIN_STYLE_ID = 'gasup365-pin-css';
 
-type LocationStatus = 'checking' | 'granted' | 'denied';
+// One map controller for both platforms: run inside the WebView on phones and
+// through `new Function` on web. Pins arrive as pre-escaped HTML (pinHtml.ts),
+// so nothing here concatenates user data into markup.
+const MAP_CONTROLLER_JS = `
+var map = L.map(el, { zoomControl: false, attributionControl: false }).setView(init.center, init.zoom);
+L.tileLayer(init.tileUrl, { maxZoom: 19 }).addTo(map);
+var pinLayer = L.layerGroup().addTo(map);
+var userMarker = null;
+map.on('click', function () { post({ type: 'map_press' }); });
+function setPins(pins) {
+  pinLayer.clearLayers();
+  pins.forEach(function (pin) {
+    var icon = L.divIcon({ className: 'gu-pin', html: pin.html, iconSize: pin.size, iconAnchor: pin.anchor });
+    L.marker([pin.lat, pin.lng], { icon: icon, title: pin.title, keyboard: true, zIndexOffset: pin.zIndexOffset })
+      .addTo(pinLayer)
+      .on('click', function () { post({ type: 'pin_press', id: pin.id }); });
+  });
+}
+function setUser(center, html) {
+  if (userMarker) { userMarker.setLatLng(center); return; }
+  var icon = L.divIcon({ className: 'gu-pin', html: html, iconSize: [30, 30], iconAnchor: [15, 15] });
+  userMarker = L.marker(center, { icon: icon, title: 'Your location', interactive: false }).addTo(map);
+}
+function handle(command) {
+  if (command.type === 'pins') setPins(command.pins);
+  else if (command.type === 'user') setUser(command.center, command.html);
+  else if (command.type === 'zoomIn') map.zoomIn();
+  else if (command.type === 'zoomOut') map.zoomOut();
+  else if (command.type === 'recenter') map.setView(command.center, Math.max(map.getZoom(), 14));
+  else if (command.type === 'resize') map.invalidateSize();
+  else if (command.type === 'destroy') map.remove();
+}
+return { handle: handle };
+`;
 
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+type MapController = { handle: (command: MapCommand) => void };
 
-const ensureWebLeafletCss = () => {
-  if (Platform.OS !== 'web' || typeof document === 'undefined') return;
-  if (document.querySelector(`link[href="${LEAFLET_CSS_URL}"]`)) return;
-
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = LEAFLET_CSS_URL;
-  document.head.appendChild(link);
-};
-
-export const LiveMap: React.FC<LiveMapProps> = ({ markers, center, zoom, onMarkerPress }) => {
-  const webViewRef = useRef<WebView>(null);
-  const webMapRef = useRef<Leaflet.Map | null>(null);
-  const webMarkerLayerRef = useRef<Leaflet.LayerGroup | null>(null);
-  const webUserMarkerRef = useRef<Leaflet.Marker | null>(null);
-  const webContainerRef = useRef<HTMLElement | null>(null);
-  const initialCenterRef = useRef(center);
-  const initialZoomRef = useRef(zoom);
-  const [mapReady, setMapReady] = useState(false);
-  const [mapError, setMapError] = useState<string | null>(null);
-  const [locationStatus, setLocationStatus] = useState<LocationStatus>('checking');
-  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
-
-  const effectiveCenter = userLocation ?? (locationStatus === 'denied' ? KALIBO_CENTER : center);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const loadLocation = async () => {
-      try {
-        const permission = await Location.requestForegroundPermissionsAsync();
-
-        if (!mounted) return;
-
-        if (permission.status !== 'granted') {
-          setLocationStatus('denied');
-          setUserLocation(null);
-          return;
-        }
-
-        const position = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
-
-        if (!mounted) return;
-
-        setUserLocation([position.coords.latitude, position.coords.longitude]);
-        setLocationStatus('granted');
-      } catch {
-        if (!mounted) return;
-        setLocationStatus('denied');
-        setUserLocation(null);
-      }
-    };
-
-    loadLocation();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const mobileHtml = useMemo(
-    () => `<!DOCTYPE html>
+const buildMobileHtml = (init: object) => `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>
-      html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; }
-      body { background: #fff7ed; }
-      .user-dot {
-        width: 18px;
-        height: 18px;
-        border-radius: 999px;
-        background: #2563eb;
-        border: 3px solid #ffffff;
-        box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.18);
-      }
-    </style>
+    <link rel="stylesheet" href="${LEAFLET_CSS_URL}" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@800&display=swap" />
+    <script src="${LEAFLET_JS_URL}"></script>
+    <style>html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; }${PIN_CSS}</style>
   </head>
   <body>
     <div id="map"></div>
     <script>
-      var map;
-      var markerLayer;
-      var userMarker;
-      var markerIcon = L.icon({
-        iconUrl: '${MARKER_ICON_URL}',
-        iconRetinaUrl: '${MARKER_ICON_2X_URL}',
-        shadowUrl: '${MARKER_SHADOW_URL}',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41]
-      });
-      var userIcon = L.divIcon({ className: '', html: '<div class="user-dot"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
-
-      function sendError(message) {
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: message }));
-      }
-
-      function addMarkers(markers) {
-        markerLayer.clearLayers();
-        markers.forEach(function(marker) {
-          var popup = '<strong>' + marker.title + '</strong>' + (marker.description ? '<br />' + marker.description : '');
-          L.marker([marker.lat, marker.lng], { icon: markerIcon })
-            .addTo(markerLayer)
-            .bindPopup(popup)
-            .on('click', function() {
-              window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'marker_press', markerId: marker.id }));
-            });
-        });
-      }
-
-      function setUserLocation(userLocation) {
-        if (!userLocation) return;
-        if (userMarker) {
-          userMarker.setLatLng(userLocation);
-        } else {
-          userMarker = L.marker(userLocation, { icon: userIcon }).addTo(map).bindPopup('Your location');
-        }
-      }
-
-      function updateMap(payload) {
-        if (!map || !payload) return;
-        map.setView(payload.center, payload.zoom || map.getZoom());
-        addMarkers(payload.markers || []);
-        setUserLocation(payload.userLocation);
-        setTimeout(function() { map.invalidateSize(); }, 60);
-      }
-
-      function handleMessage(event) {
-        try {
-          updateMap(JSON.parse(event.data));
-        } catch (error) {
-          sendError('Unable to update map');
-        }
-      }
-
+      function post(message) { window.ReactNativeWebView.postMessage(JSON.stringify(message)); }
       try {
-        map = L.map('map', { zoomControl: true, attributionControl: true }).setView([${center[0]}, ${center[1]}], ${zoom});
-        L.tileLayer('${OSM_TILE_URL}', {
-          maxZoom: 19,
-          attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
-        markerLayer = L.layerGroup().addTo(map);
-        document.addEventListener('message', handleMessage);
-        window.addEventListener('message', handleMessage);
-        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ready' }));
+        var api = (function (L, el, init, post) {${MAP_CONTROLLER_JS}})(L, document.getElementById('map'), ${JSON.stringify(init)}, post);
+        var onMessage = function (event) { try { api.handle(JSON.parse(event.data)); } catch (error) {} };
+        document.addEventListener('message', onMessage);
+        window.addEventListener('message', onMessage);
+        post({ type: 'ready' });
       } catch (error) {
-        sendError('Unable to load map');
+        post({ type: 'error' });
       }
     </script>
   </body>
-</html>`,
-    [center, zoom],
-  );
+</html>`;
 
-  const sendMobileUpdate = useCallback(() => {
-    webViewRef.current?.postMessage(
-      JSON.stringify({
-        center: effectiveCenter,
-        markers,
-        userLocation,
-        zoom,
-      }),
-    );
-  }, [effectiveCenter, markers, userLocation, zoom]);
+const ensureWebStyles = () => {
+  if (!document.querySelector(`link[href="${LEAFLET_CSS_URL}"]`)) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = LEAFLET_CSS_URL;
+    document.head.appendChild(link);
+  }
+  if (!document.getElementById(PIN_STYLE_ID)) {
+    const style = document.createElement('style');
+    style.id = PIN_STYLE_ID;
+    style.textContent = PIN_CSS;
+    document.head.appendChild(style);
+  }
+};
+
+export const LiveMap = ({ pins, initialCenter, zoom, userLocation, followUser, onPinPress, onMapPress, onError, ref }: LiveMapProps) => {
+  const webViewRef = useRef<WebView>(null);
+  const webContainerRef = useRef<HTMLElement | null>(null);
+  const webControllerRef = useRef<MapController | null>(null);
+  const callbacksRef = useRef({ onPinPress, onMapPress, onError });
+  const centeredOnUserRef = useRef(false);
+  const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [init] = useState(() => ({ center: initialCenter, zoom, tileUrl: OSM_TILE_URL }));
 
   useEffect(() => {
-    if (Platform.OS !== 'web' && mapReady) {
-      sendMobileUpdate();
+    callbacksRef.current = { onPinPress, onMapPress, onError };
+  });
+
+  const send = useCallback((command: MapCommand) => {
+    if (Platform.OS === 'web') webControllerRef.current?.handle(command);
+    else webViewRef.current?.postMessage(JSON.stringify(command));
+  }, []);
+
+  const handleEvent = useCallback((event: MapEvent) => {
+    if (event.type === 'ready') setReady(true);
+    if (event.type === 'error') {
+      setFailed(true);
+      callbacksRef.current.onError();
     }
-  }, [mapReady, sendMobileUpdate]);
+    if (event.type === 'map_press') callbacksRef.current.onMapPress();
+    if (event.type === 'pin_press') callbacksRef.current.onPinPress(event.id);
+  }, []);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      zoomIn: () => send({ type: 'zoomIn' }),
+      zoomOut: () => send({ type: 'zoomOut' }),
+      recenter: (center) => send({ type: 'recenter', center }),
+    }),
+    [send],
+  );
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-
     let cancelled = false;
 
     const initWebMap = async () => {
       try {
-        ensureWebLeafletCss();
+        ensureWebStyles();
         const leaflet = await import('leaflet');
-        if (cancelled || !webContainerRef.current || webMapRef.current) return;
-
-        leaflet.Icon.Default.mergeOptions({
-          iconRetinaUrl: MARKER_ICON_2X_URL,
-          iconUrl: MARKER_ICON_URL,
-          shadowUrl: MARKER_SHADOW_URL,
-        });
-
-        const map = leaflet.map(webContainerRef.current).setView(initialCenterRef.current, initialZoomRef.current);
-        leaflet
-          .tileLayer(OSM_TILE_URL, {
-            maxZoom: 19,
-            attribution: '&copy; OpenStreetMap contributors',
-          })
-          .addTo(map);
-
-        webMarkerLayerRef.current = leaflet.layerGroup().addTo(map);
-        webMapRef.current = map;
-        setMapReady(true);
+        if (cancelled || !webContainerRef.current || webControllerRef.current) return;
+        const createController = new Function('L', 'el', 'init', 'post', MAP_CONTROLLER_JS);
+        webControllerRef.current = createController(leaflet, webContainerRef.current, init, handleEvent) as MapController;
+        handleEvent({ type: 'ready' });
+        setTimeout(() => webControllerRef.current?.handle({ type: 'resize' }), 60);
       } catch {
-        setMapError('Unable to load map');
+        handleEvent({ type: 'error' });
       }
     };
 
     initWebMap();
-
     return () => {
       cancelled = true;
-      webMapRef.current?.remove();
-      webMapRef.current = null;
-      webMarkerLayerRef.current = null;
-      webUserMarkerRef.current = null;
+      webControllerRef.current?.handle({ type: 'destroy' });
+      webControllerRef.current = null;
     };
-  }, []);
+  }, [handleEvent, init]);
 
   useEffect(() => {
-    if (Platform.OS !== 'web' || !webMapRef.current || !webMarkerLayerRef.current) return;
+    if (ready) send({ type: 'pins', pins });
+  }, [pins, ready, send]);
 
-    const updateWebMarkers = async () => {
-      const leaflet = await import('leaflet');
+  useEffect(() => {
+    if (!ready || !userLocation) return;
+    send({ type: 'user', center: userLocation, html: USER_MARKER_HTML });
+    if (followUser && !centeredOnUserRef.current) {
+      centeredOnUserRef.current = true;
+      send({ type: 'recenter', center: userLocation });
+    }
+  }, [followUser, ready, send, userLocation]);
 
-      webMapRef.current?.setView(effectiveCenter, zoom);
-      webMarkerLayerRef.current?.clearLayers();
-
-      markers.forEach((marker) => {
-        const popup = `<strong>${escapeHtml(marker.title)}</strong>${
-          marker.description ? `<br />${escapeHtml(marker.description)}` : ''
-        }`;
-        leaflet
-          .marker([marker.lat, marker.lng])
-          .addTo(webMarkerLayerRef.current!)
-          .bindPopup(popup)
-          .on('click', () => onMarkerPress?.(marker.id));
-      });
-
-      if (userLocation) {
-        const userIcon = leaflet.divIcon({
-          className: '',
-          html: '<div style="width:18px;height:18px;border-radius:999px;background:#2563eb;border:3px solid #fff;box-shadow:0 0 0 8px rgba(37,99,235,.18);"></div>',
-          iconSize: [18, 18],
-          iconAnchor: [9, 9],
-        });
-
-        if (webUserMarkerRef.current) {
-          webUserMarkerRef.current.setLatLng(userLocation);
-        } else {
-          webUserMarkerRef.current = leaflet
-            .marker(userLocation, { icon: userIcon })
-            .addTo(webMapRef.current!)
-            .bindPopup('Your location');
-        }
-      }
-
-      setTimeout(() => webMapRef.current?.invalidateSize(), 60);
-    };
-
-    updateWebMarkers().catch(() => setMapError('Unable to load map'));
-  }, [effectiveCenter, markers, onMarkerPress, userLocation, zoom]);
+  const mobileHtml = useMemo(() => buildMobileHtml(init), [init]);
 
   const handleMobileMessage = (event: WebViewMessageEvent) => {
     try {
-      const message = JSON.parse(event.nativeEvent.data) as {
-        type?: string;
-        markerId?: string;
-        message?: string;
-      };
-
-      if (message.type === 'ready') {
-        setMapReady(true);
-        setMapError(null);
-      }
-
-      if (message.type === 'marker_press' && message.markerId) {
-        onMarkerPress?.(message.markerId);
-      }
-
-      if (message.type === 'error') {
-        setMapError(message.message || 'Unable to load map');
-      }
+      handleEvent(JSON.parse(event.nativeEvent.data) as MapEvent);
     } catch {
-      setMapError('Unable to load map');
+      handleEvent({ type: 'error' });
     }
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} accessibilityLabel="Map of Kalibo">
       {Platform.OS === 'web' ? (
         React.createElement('div', {
           ref: webContainerRef,
-          id: 'map',
-          style: { width: '100%', height: '100vh', flex: 1 },
+          style: { position: 'absolute', inset: 0 },
         })
       ) : (
         <WebView
@@ -343,33 +223,17 @@ export const LiveMap: React.FC<LiveMapProps> = ({ markers, center, zoom, onMarke
           originWhitelist={['*']}
           source={{ html: mobileHtml }}
           style={styles.webView}
-          onLoadEnd={sendMobileUpdate}
-          onError={() => setMapError('Unable to load map')}
+          onError={() => handleEvent({ type: 'error' })}
           onMessage={handleMobileMessage}
-          injectedJavaScript="window.__gasup365MapReady = true; true;"
         />
       )}
 
-      {!mapReady && !mapError ? (
+      {!ready && !failed ? (
         <View style={styles.overlay}>
-          <ActivityIndicator color={colors.primary} size="large" />
-          <Text style={styles.overlayText}>Loading live map...</Text>
-        </View>
-      ) : null}
-
-      {locationStatus === 'denied' ? (
-        <View style={styles.topNotice}>
-          <Text style={styles.noticeText} selectable>
-            Location permission denied
-          </Text>
-        </View>
-      ) : null}
-
-      {mapError ? (
-        <View style={styles.overlay}>
-          <Text style={styles.errorText} selectable>
-            {mapError}
-          </Text>
+          <View style={[pixel.panel, styles.loader]}>
+            <Sprite art={art.jeepney} width={96} height={45} />
+            <Text style={[type.displaySm, styles.loaderText]}>Loading map…</Text>
+          </View>
         </View>
       ) : null}
     </View>
@@ -377,48 +241,14 @@ export const LiveMap: React.FC<LiveMapProps> = ({ markers, center, zoom, onMarke
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.primarySoft,
-  },
-  webView: {
-    flex: 1,
-    backgroundColor: colors.primarySoft,
-  },
+  container: { flex: 1, backgroundColor: palette.mapGround },
+  webView: { flex: 1, backgroundColor: palette.mapGround },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    backgroundColor: 'rgba(255, 253, 249, 0.86)',
+    backgroundColor: palette.mapGround,
   },
-  overlayText: {
-    color: colors.primaryDark,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  topNotice: {
-    position: 'absolute',
-    top: 54,
-    left: 16,
-    right: 16,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  noticeText: {
-    color: colors.primaryDark,
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  errorText: {
-    color: colors.destructive,
-    fontSize: 15,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
+  loader: { alignItems: 'center', gap: 8, paddingHorizontal: 24, paddingVertical: 16 },
+  loaderText: { color: colors.text },
 });
